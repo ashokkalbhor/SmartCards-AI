@@ -20,7 +20,6 @@ SmartCards AI tells you which credit card to use for maximum rewards based on th
 - **Real-time Updates**: Get instant recommendations based on current offers
 
 ### Premium UI/UX
-- **Cred-like Interface**: Modern, premium design inspired by Cred
 - **Smooth Animations**: Fluid transitions and micro-interactions
 - **Dark/Light Mode**: Personalized theme preferences
 - **Responsive Design**: Works seamlessly across all devices
