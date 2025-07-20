@@ -12,7 +12,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {isAuthenticated && <Header />}
-      <main className={isAuthenticated ? 'pt-0' : ''}>
+      <main className={isAuthenticated ? 'pt-4' : ''}>
         {children}
       </main>
     </div>

@@ -181,15 +181,15 @@ const LoginPage: React.FC = () => {
             </button>
           </form>
 
-          {/* Divider */}
-          <div className="my-6 flex items-center">
+          {/* Divider - Commented out for Google Auth */}
+          {/* <div className="my-6 flex items-center">
             <div className="flex-1 border-t border-gray-300 dark:border-gray-600"></div>
             <span className="px-4 text-sm text-gray-500 dark:text-gray-400">or</span>
             <div className="flex-1 border-t border-gray-300 dark:border-gray-600"></div>
-          </div>
+          </div> */}
 
-          {/* Social Login */}
-          <div className="space-y-3">
+          {/* Social Login - Commented out for Google Auth */}
+          {/* <div className="space-y-3">
             <button className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
               <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -199,7 +199,7 @@ const LoginPage: React.FC = () => {
               </svg>
               Continue with Google
             </button>
-          </div>
+          </div> */}
 
           {/* Sign Up Link */}
           <div className="mt-8 text-center">

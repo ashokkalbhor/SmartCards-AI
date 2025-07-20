@@ -19,13 +19,13 @@ from app.schemas.card_master_data import (
     CardComparisonData
 )
 from app.models.user import User
-from app.core.auth import get_current_user
+from app.core.security import get_current_user_sync
 
 router = APIRouter()
 
 
 # Card Master Data endpoints
-@router.get("/cards", response_model=List[CardMasterDataResponse])
+@router.get("/cards")
 def get_card_master_data(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
@@ -35,10 +35,7 @@ def get_card_master_data(
     db: Session = Depends(get_db)
 ):
     """Get all card master data with optional filters"""
-    query = db.query(CardMasterData).options(
-        joinedload(CardMasterData.spending_categories),
-        joinedload(CardMasterData.merchant_rewards)
-    )
+    query = db.query(CardMasterData)
     
     if bank_name:
         query = query.filter(CardMasterData.bank_name.ilike(f"%{bank_name}%"))
@@ -48,7 +45,22 @@ def get_card_master_data(
         query = query.filter(CardMasterData.is_active == is_active)
     
     cards = query.offset(skip).limit(limit).all()
-    return cards
+    
+    # Return basic card information
+    result = []
+    for card in cards:
+        result.append({
+            "id": card.id,
+            "bank_name": card.bank_name,
+            "card_name": card.card_name,
+            "display_name": card.display_name,
+            "card_network": card.card_network,
+            "joining_fee_display": card.joining_fee_display,
+            "annual_fee_display": card.annual_fee_display,
+            "is_active": card.is_active
+        })
+    
+    return result
 
 
 @router.get("/cards/{card_id}", response_model=CardMasterDataResponse)
@@ -69,7 +81,7 @@ def get_card_master_data_by_id(card_id: int, db: Session = Depends(get_db)):
 def create_card_master_data(
     card_data: CardMasterDataCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_sync)
 ):
     """Create new card master data (Admin only)"""
     # TODO: Add admin permission check
@@ -102,7 +114,7 @@ def update_card_master_data(
     card_id: int,
     card_data: CardMasterDataUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_sync)
 ):
     """Update card master data (Admin only)"""
     # TODO: Add admin permission check
@@ -125,7 +137,7 @@ def update_card_master_data(
 def delete_card_master_data(
     card_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_sync)
 ):
     """Delete card master data (Admin only)"""
     # TODO: Add admin permission check
@@ -146,7 +158,7 @@ def create_spending_category(
     card_id: int,
     category_data: CardSpendingCategoryCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_sync)
 ):
     """Add spending category to a card"""
     # Verify card exists
@@ -168,7 +180,7 @@ def update_spending_category(
     category_id: int,
     category_data: CardSpendingCategoryUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_sync)
 ):
     """Update spending category"""
     category = db.query(CardSpendingCategory).filter(CardSpendingCategory.id == category_id).first()
@@ -189,7 +201,7 @@ def update_spending_category(
 def delete_spending_category(
     category_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_sync)
 ):
     """Delete spending category"""
     category = db.query(CardSpendingCategory).filter(CardSpendingCategory.id == category_id).first()
@@ -208,7 +220,7 @@ def create_merchant_reward(
     card_id: int,
     merchant_data: CardMerchantRewardCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_sync)
 ):
     """Add merchant reward to a card"""
     # Verify card exists
@@ -230,7 +242,7 @@ def update_merchant_reward(
     merchant_id: int,
     merchant_data: CardMerchantRewardUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_sync)
 ):
     """Update merchant reward"""
     merchant = db.query(CardMerchantReward).filter(CardMerchantReward.id == merchant_id).first()
@@ -251,7 +263,7 @@ def update_merchant_reward(
 def delete_merchant_reward(
     merchant_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_sync)
 ):
     """Delete merchant reward"""
     merchant = db.query(CardMerchantReward).filter(CardMerchantReward.id == merchant_id).first()
@@ -265,16 +277,34 @@ def delete_merchant_reward(
 
 
 # Comparison endpoint
+def get_current_user_optional():
+    """Optional authentication dependency"""
+    try:
+        from app.core.security import get_current_user_sync
+        return get_current_user_sync()
+    except:
+        return None
+
 @router.get("/comparison", response_model=List[CardComparisonData])
 def get_card_comparison_data(
     user_cards_only: bool = Query(False, description="Show only user's cards"),
     card_ids: Optional[List[int]] = Query(None, description="Specific card IDs to compare"),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    db: Session = Depends(get_db)
 ):
     """Get card comparison data for the comparison page"""
     
-    if user_cards_only:
+    # Try to get current user optionally
+    current_user = None
+    try:
+        current_user = get_current_user_optional()
+    except:
+        pass
+    
+    # If user_cards_only is requested but no user is authenticated, return empty
+    if user_cards_only and not current_user:
+        return []
+    
+    if user_cards_only and current_user:
         # Get cards that the user owns
         user_card_master_ids = db.query(CreditCard.card_master_data_id).filter(
             and_(
@@ -345,28 +375,19 @@ def get_card_comparison_data(
 @router.get("/banks", response_model=List[str])
 def get_available_banks(db: Session = Depends(get_db)):
     """Get list of available banks"""
-    banks = db.query(CardMasterData.bank_name).filter(
-        CardMasterData.is_active == True
-    ).distinct().all()
-    
+    banks = db.query(CardMasterData.bank_name).distinct().all()
     return [bank[0] for bank in banks]
 
 
 @router.get("/categories", response_model=List[str])
 def get_available_categories(db: Session = Depends(get_db)):
     """Get list of available spending categories"""
-    categories = db.query(CardSpendingCategory.category_name).filter(
-        CardSpendingCategory.is_active == True
-    ).distinct().all()
-    
+    categories = db.query(CardSpendingCategory.category_name).distinct().all()
     return [category[0] for category in categories]
 
 
 @router.get("/merchants", response_model=List[str])
 def get_available_merchants(db: Session = Depends(get_db)):
     """Get list of available merchants"""
-    merchants = db.query(CardMerchantReward.merchant_name).filter(
-        CardMerchantReward.is_active == True
-    ).distinct().all()
-    
+    merchants = db.query(CardMerchantReward.merchant_name).distinct().all()
     return [merchant[0] for merchant in merchants] 

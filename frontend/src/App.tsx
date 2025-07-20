@@ -17,6 +17,7 @@ import DashboardPage from './pages/Dashboard/DashboardPage';
 import CardsPage from './pages/Cards/CardsPage';
 import AddCardPage from './pages/Cards/AddCardPage';
 import CardDetailPage from './pages/Cards/CardDetailPage';
+import EditCardPage from './pages/Cards/EditCardPage';
 import CardComparisonPage from './pages/Cards/CardComparisonPage';
 import TransactionsPage from './pages/Transactions/TransactionsPage';
 import RewardsPage from './pages/Rewards/RewardsPage';
@@ -109,6 +110,14 @@ function AppContent() {
             <ProtectedRoute>
               <Layout>
                 <CardDetailPage />
+              </Layout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/cards/:id/edit" element={
+            <ProtectedRoute>
+              <Layout>
+                <EditCardPage />
               </Layout>
             </ProtectedRoute>
           } />

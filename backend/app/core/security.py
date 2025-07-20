@@ -8,8 +8,9 @@ import structlog
 
 from app.core.config import settings
 from app.models.user import User
-from app.core.database import get_async_db
+from app.core.database import get_async_db, get_db
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 from sqlalchemy import select
 
 logger = structlog.get_logger()
@@ -98,6 +99,40 @@ async def get_current_user(
     # Get user from database
     result = await db.execute(select(User).where(User.id == int(user_id)))
     user = result.scalar_one_or_none()
+    
+    if user is None:
+        raise credentials_exception
+    
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Inactive user"
+        )
+    
+    return user
+
+
+def get_current_user_sync(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+) -> User:
+    """Get current authenticated user (synchronous version)"""
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    
+    try:
+        token = credentials.credentials
+        user_id = verify_token(token)
+        if user_id is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+    
+    # Get user from database (synchronous)
+    user = db.query(User).filter(User.id == int(user_id)).first()
     
     if user is None:
         raise credentials_exception

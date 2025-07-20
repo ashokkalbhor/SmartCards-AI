@@ -27,7 +27,7 @@ class CardMasterData(Base):
     card_name = Column(String(200), nullable=False)
     card_variant = Column(String(100), nullable=True)  # e.g., "Gold", "Platinum"
     card_network = Column(String(50), nullable=False)  # Visa, Mastercard, Amex, RuPay
-    card_tier = Column(Enum(CardTierEnum), nullable=False, default=CardTierEnum.BASIC)
+    card_tier = Column(String(20), nullable=False, default="basic")
     
     # Fees and Charges
     joining_fee = Column(Float, nullable=True)

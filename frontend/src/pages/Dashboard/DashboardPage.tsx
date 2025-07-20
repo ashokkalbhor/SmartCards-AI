@@ -1,10 +1,13 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { CreditCard, Banknote, Gift, Activity, ArrowUpRight, ArrowDownRight, Building2 } from 'lucide-react';
 import { formatRupees } from '../../utils/currency';
 import ChatBot from '../../components/UI/ChatBot';
 
 const DashboardPage: React.FC = () => {
+  const navigate = useNavigate();
+  
   // Mock data - replace with actual API calls
   const stats = {
     totalCards: 4,
@@ -28,7 +31,7 @@ const DashboardPage: React.FC = () => {
   ];
 
   return (
-    <div className="h-screen flex flex-col p-4 space-y-4 overflow-hidden">
+    <div className="min-h-screen flex flex-col p-4 space-y-4">
       {/* Compact Header */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -54,14 +57,17 @@ const DashboardPage: React.FC = () => {
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 flex-shrink-0"
         {...({} as any)}
       >
-        {/* Total Cards */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700">
+        {/* Total Cards - Made clickable */}
+        <div 
+          onClick={() => navigate('/cards')}
+          className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 cursor-pointer hover:shadow-md hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-200 group"
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Total Cards</p>
               <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.totalCards}</p>
             </div>
-            <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+            <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg group-hover:bg-blue-200 dark:group-hover:bg-blue-800 transition-colors">
               <CreditCard className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
@@ -120,27 +126,27 @@ const DashboardPage: React.FC = () => {
         </div>
       </motion.div>
 
-      {/* Main Content Grid - Optimized for viewport height */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-1 min-h-0">
+      {/* Main Content Grid - Natural content flow */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* ChatBot */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="lg:col-span-2 h-full"
+          className="lg:col-span-2"
           {...({} as any)}
         >
           <ChatBot />
         </motion.div>
 
-        {/* Right Column - Optimized spacing */}
-        <div className="space-y-4 h-full flex flex-col min-h-0">
+        {/* Right Column */}
+        <div className="space-y-4">
           {/* Top Performing Cards - More compact */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 flex-shrink-0"
+            className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700"
             {...({} as any)}
           >
             <div className="flex items-center justify-between mb-4">
@@ -172,21 +178,21 @@ const DashboardPage: React.FC = () => {
             </div>
           </motion.div>
 
-          {/* Recent Transactions - Optimized for remaining space */}
+          {/* Recent Transactions */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
-            className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 flex-1 min-h-0 flex flex-col"
+            className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700"
             {...({} as any)}
           >
-            <div className="flex items-center justify-between mb-4 flex-shrink-0">
+            <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Recent Transactions</h2>
               <button className="text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300 text-sm font-medium">
                 View all
               </button>
             </div>
-            <div className="space-y-3 overflow-y-auto flex-1 min-h-0">
+            <div className="space-y-3 max-h-80 overflow-y-auto">
               {recentTransactions.map((transaction) => (
                 <div key={transaction.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                   <div className="flex items-center space-x-3">

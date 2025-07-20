@@ -45,7 +45,7 @@ const HomePage: React.FC = () => {
               <span className="text-primary-600 dark:text-primary-400">Optimized</span>
             </h1>
             <p className="text-xl md:text-2xl text-gray-600 dark:text-gray-300 mb-8 max-w-3xl mx-auto">
-              UNGI SmartCards AI uses advanced machine learning to recommend the perfect credit card for every purchase, maximizing your rewards and savings.
+              UNGI SmartCards AI uses advanced machine learning and Gen AI to recommend the perfect credit card for every purchase, maximizing your rewards and savings.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
@@ -77,7 +77,7 @@ const HomePage: React.FC = () => {
               Why Choose UNGI SmartCards AI?
             </h2>
             <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              Our AI-powered platform analyzes your spending patterns and recommends the optimal card for every transaction.
+              Our Gen AI-powered platform analyzes your spending patterns and recommends the optimal card for every transaction.
             </p>
           </motion.div>
 
@@ -151,7 +151,7 @@ const HomePage: React.FC = () => {
               Ready to Optimize Every Swipe?
             </h2>
             <p className="text-xl text-primary-100 mb-8">
-              Join thousands of users who are already maximizing their credit card rewards with UNGI SmartCards AI.
+              Join users who are already maximizing their credit card rewards with UNGI SmartCards AI.
             </p>
             <Link
               to="/register"
