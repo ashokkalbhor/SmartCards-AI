@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { User, LogOut, Settings, ChevronDown } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -68,6 +68,12 @@ const Header: React.FC = () => {
           >
             UNGI SmartCards AI
           </button>
+          <Link
+            to="/about"
+            className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors text-sm"
+          >
+            About
+          </Link>
         </div>
 
         {/* Right side - User Menu */}

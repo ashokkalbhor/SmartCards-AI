@@ -24,7 +24,9 @@ const CardsPage: React.FC = () => {
     const fetchCards = async () => {
       try {
         const data = await creditCardsAPI.getCards();
-        setCards(data);
+        // Sort cards alphabetically by card_name
+        const sortedCards = data.sort((a: Card, b: Card) => a.card_name.localeCompare(b.card_name));
+        setCards(sortedCards);
       } catch (error) {
         console.error('Error fetching cards:', error);
       } finally {
@@ -42,7 +44,9 @@ const CardsPage: React.FC = () => {
       const fetchCards = async () => {
         try {
           const data = await creditCardsAPI.getCards();
-          setCards(data);
+          // Sort cards alphabetically by card_name
+          const sortedCards = data.sort((a: Card, b: Card) => a.card_name.localeCompare(b.card_name));
+          setCards(sortedCards);
         } catch (error) {
           console.error('Error fetching cards:', error);
         }

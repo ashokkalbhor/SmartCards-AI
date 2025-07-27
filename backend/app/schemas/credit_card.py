@@ -33,6 +33,7 @@ class CreditCardBase(BaseModel):
 
 
 class CreditCardCreate(CreditCardBase):
+    card_master_data_id: Optional[int] = None
     credit_limit: Optional[float] = None
     available_credit: Optional[float] = None
     current_balance: float = 0.0
@@ -82,6 +83,7 @@ class CreditCardUpdate(BaseModel):
 class CreditCardResponse(CreditCardBase):
     id: int
     user_id: int
+    card_master_data_id: Optional[int] = None
     masked_number: str
     expiry_date: str
     credit_limit: Optional[float] = None

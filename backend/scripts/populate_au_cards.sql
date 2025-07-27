@@ -60,4 +60,10 @@ NULL, 199, 200000, 21, 70,
 ('AU Small Finance Bank', 'AU Bank Digital Credit Card', 'Digital First', 'Visa', 'Standard',
 NULL, 299, 250000, 21, 45,
 1, 0, TRUE, 25000, 400000,
-3.5, 'Digital-native credit card with instant approval and mobile-first features', TRUE);
+3.5, 'Digital-native credit card with instant approval and mobile-first features', TRUE),
+
+-- Travel Co-branded Cards
+('AU Small Finance Bank', 'AU Bank IXIGO Credit Card', 'Co-branded Travel', 'Visa', 'Standard',
+999, 999, 400000, 21, 70,
+2, 2, TRUE, 40000, 800000,
+3.5, 'Travel-focused co-branded card with IXIGO booking benefits, travel insurance, and reward points on travel spends', TRUE);

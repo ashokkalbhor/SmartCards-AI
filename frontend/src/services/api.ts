@@ -2,7 +2,9 @@ import axios from 'axios';
 
 // Create axios instance with base configuration
 const api = axios.create({
-  baseURL: 'http://localhost:8000/api/v1',
+  baseURL: process.env.NODE_ENV === 'production' 
+    ? 'https://your-railway-app.railway.app/api/v1'  // Replace with your Railway URL
+    : 'http://localhost:8000/api/v1',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -102,7 +104,7 @@ export const usersAPI = {
 // Credit Cards API
 export const creditCardsAPI = {
   getCards: async () => {
-    const response = await api.get('/credit-cards');
+    const response = await api.get('/credit-cards?limit=1000');
     return response.data;
   },
 
@@ -123,6 +125,11 @@ export const creditCardsAPI = {
 
   deleteCard: async (id: string) => {
     const response = await api.delete(`/credit-cards/${id}`);
+    return response.data;
+  },
+
+  getDashboardStats: async () => {
+    const response = await api.get('/credit-cards/dashboard/stats');
     return response.data;
   },
 };
@@ -174,6 +181,8 @@ export const cardMasterDataAPI = {
     if (bankName) params.append('bank_name', bankName);
     if (cardTier) params.append('card_tier', cardTier);
     if (isActive !== undefined) params.append('is_active', isActive.toString());
+    // Request a higher limit to get more cards
+    params.append('limit', '1000');
     
     const response = await api.get(`/card-master-data/cards?${params.toString()}`);
     return response.data;

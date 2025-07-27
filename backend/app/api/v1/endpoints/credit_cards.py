@@ -37,7 +37,7 @@ def create_credit_card(
 @router.get("/", response_model=List[CreditCardResponse])
 def get_credit_cards(
     skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=100),
+    limit: int = Query(100, ge=1, le=1000),  # Increased limit to 1000
     is_active: bool = Query(True),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user_sync)
@@ -128,4 +128,29 @@ def get_credit_cards_summary(
         CreditCard.is_active == True
     ).all()
     
-    return cards 
+    return cards
+
+
+@router.get("/dashboard/stats")
+def get_dashboard_stats(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_sync)
+):
+    """Get dashboard statistics for the current user"""
+    # Count total active cards
+    total_cards = db.query(CreditCard).filter(
+        CreditCard.user_id == current_user.id,
+        CreditCard.is_active == True
+    ).count()
+    
+    # For now, return mock data for other stats until we have transaction/rewards data
+    # TODO: Replace with actual data from transactions and rewards tables
+    stats = {
+        "totalCards": total_cards,
+        "totalBankAccounts": 2,  # Mock - replace when bank accounts are implemented
+        "totalSpent": 156420.00,  # Mock - replace with actual transaction sum
+        "totalRewards": 12450.75,  # Mock - replace with actual rewards calculation
+        "monthlySavings": 8.2,  # Mock - replace with actual savings calculation
+    }
+    
+    return stats 

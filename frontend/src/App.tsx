@@ -11,6 +11,7 @@ import LoadingSpinner from './components/UI/LoadingSpinner';
 
 // Pages
 import HomePage from './pages/HomePage';
+import AboutPage from './pages/AboutPage';
 import LoginPage from './pages/Auth/LoginPage';
 import RegisterPage from './pages/Auth/RegisterPage';
 import DashboardPage from './pages/Dashboard/DashboardPage';
@@ -66,6 +67,7 @@ function AppContent() {
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<HomePage />} />
+          <Route path="/about" element={<AboutPage />} />
           <Route path="/login" element={
             isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />
           } />

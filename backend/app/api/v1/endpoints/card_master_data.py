@@ -1,7 +1,8 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import and_, or_
+from fastapi.security import HTTPAuthorizationCredentials
 
 from app.core.database import get_db
 from app.models.card_master_data import CardMasterData, CardSpendingCategory, CardMerchantReward
@@ -19,7 +20,11 @@ from app.schemas.card_master_data import (
     CardComparisonData
 )
 from app.models.user import User
-from app.core.security import get_current_user_sync
+from app.core.security import get_current_user_sync, security, verify_token
+
+def get_current_user_optional() -> Optional[User]:
+    """Optional authentication dependency that returns None if not authenticated"""
+    return None  # We'll handle authentication manually in the endpoint
 
 router = APIRouter()
 
@@ -28,7 +33,7 @@ router = APIRouter()
 @router.get("/cards")
 def get_card_master_data(
     skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=100),
+    limit: int = Query(100, ge=1, le=1000),  # Increased limit to 1000
     bank_name: Optional[str] = Query(None),
     card_tier: Optional[str] = Query(None),
     is_active: bool = Query(True),
@@ -277,45 +282,75 @@ def delete_merchant_reward(
 
 
 # Comparison endpoint
-def get_current_user_optional():
-    """Optional authentication dependency"""
-    try:
-        from app.core.security import get_current_user_sync
-        return get_current_user_sync()
-    except:
-        return None
-
 @router.get("/comparison", response_model=List[CardComparisonData])
 def get_card_comparison_data(
+    request: Request,
     user_cards_only: bool = Query(False, description="Show only user's cards"),
     card_ids: Optional[List[int]] = Query(None, description="Specific card IDs to compare"),
     db: Session = Depends(get_db)
 ):
     """Get card comparison data for the comparison page"""
     
-    # Try to get current user optionally
+    # Handle authentication manually
     current_user = None
-    try:
-        current_user = get_current_user_optional()
-    except:
-        pass
+    if user_cards_only:
+        try:
+            authorization = request.headers.get("Authorization")
+            if authorization and authorization.startswith("Bearer "):
+                token = authorization.replace("Bearer ", "")
+                user_id = verify_token(token)
+                if user_id:
+                    current_user = db.query(User).filter(User.id == int(user_id)).first()
+                    if current_user and not current_user.is_active:
+                        current_user = None
+        except Exception as e:
+            print(f"Error authenticating user: {e}")
+    
+    print(f"Comparison request - user_cards_only: {user_cards_only}, current_user: {current_user.id if current_user else None}")
     
     # If user_cards_only is requested but no user is authenticated, return empty
     if user_cards_only and not current_user:
+        print(f"User cards only requested but no user authenticated")
         return []
     
     if user_cards_only and current_user:
-        # Get cards that the user owns
-        user_card_master_ids = db.query(CreditCard.card_master_data_id).filter(
+        print(f"Getting user cards for user ID: {current_user.id}")
+        
+        # Debug: Check all user cards first
+        all_user_cards = db.query(CreditCard).filter(
+            CreditCard.user_id == current_user.id
+        ).all()
+        print(f"User has {len(all_user_cards)} total cards in CreditCard table")
+        for card in all_user_cards:
+            print(f"  - Card ID: {card.id}, Master Data ID: {card.card_master_data_id}, Card Name: {card.card_name}")
+        
+        # Get cards that the user owns with card_master_data_id
+        user_cards_with_master = db.query(CreditCard).filter(
             and_(
                 CreditCard.user_id == current_user.id,
                 CreditCard.card_master_data_id.isnot(None)
             )
-        ).subquery()
+        ).all()
+        print(f"User has {len(user_cards_with_master)} cards with card_master_data_id")
         
-        query = db.query(CardMasterData).filter(
-            CardMasterData.id.in_(user_card_master_ids)
-        )
+        if user_cards_with_master:
+            user_card_master_ids = [card.card_master_data_id for card in user_cards_with_master]
+            print(f"Master data IDs: {user_card_master_ids}")
+            
+            # Debug: Check if these master data IDs exist in CardMasterData table
+            master_data_cards = db.query(CardMasterData).filter(
+                CardMasterData.id.in_(user_card_master_ids)
+            ).all()
+            print(f"Found {len(master_data_cards)} cards in CardMasterData table")
+            for card in master_data_cards:
+                print(f"  - Master Data ID: {card.id}, Bank: {card.bank_name}, Card: {card.card_name}")
+            
+            query = db.query(CardMasterData).filter(
+                CardMasterData.id.in_(user_card_master_ids)
+            )
+        else:
+            print("No cards found with card_master_data_id")
+            return []
     elif card_ids:
         # Get specific cards by IDs
         query = db.query(CardMasterData).filter(CardMasterData.id.in_(card_ids))
@@ -327,6 +362,10 @@ def get_card_comparison_data(
         joinedload(CardMasterData.spending_categories),
         joinedload(CardMasterData.merchant_rewards)
     ).all()
+    
+    print(f"Found {len(cards)} cards for comparison")
+    for card in cards:
+        print(f"  - {card.bank_name} {card.card_name}")
     
     # Format data for comparison page
     comparison_data = []
@@ -390,4 +429,25 @@ def get_available_categories(db: Session = Depends(get_db)):
 def get_available_merchants(db: Session = Depends(get_db)):
     """Get list of available merchants"""
     merchants = db.query(CardMerchantReward.merchant_name).distinct().all()
-    return [merchant[0] for merchant in merchants] 
+    return [merchant[0] for merchant in merchants]
+
+@router.get("/debug/user")
+def debug_user_info(request: Request, db: Session = Depends(get_db)):
+    """Debug endpoint to check user authentication"""
+    try:
+        authorization = request.headers.get("Authorization")
+        if authorization and authorization.startswith("Bearer "):
+            token = authorization.replace("Bearer ", "")
+            user_id = verify_token(token)
+            if user_id:
+                current_user = db.query(User).filter(User.id == int(user_id)).first()
+                if current_user and current_user.is_active:
+                    return {
+                        "authenticated": True,
+                        "user_id": current_user.id,
+                        "email": current_user.email
+                    }
+    except Exception as e:
+        return {"authenticated": False, "error": str(e)}
+    
+    return {"authenticated": False} 

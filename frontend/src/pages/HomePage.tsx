@@ -174,8 +174,28 @@ const HomePage: React.FC = () => {
               </div>
               <span className="text-xl font-bold">UNGI SmartCards AI</span>
             </div>
-            <div className="text-gray-400 text-sm">
-              © 2024 UNGI SmartCards AI. Every swipe, Optimized.
+            <div className="flex items-center space-x-6">
+              <Link
+                to="/about"
+                className="text-gray-400 hover:text-white transition-colors text-sm"
+              >
+                About Us
+              </Link>
+              <a
+                href="#"
+                className="text-gray-400 hover:text-white transition-colors text-sm"
+              >
+                Privacy Policy
+              </a>
+              <a
+                href="#"
+                className="text-gray-400 hover:text-white transition-colors text-sm"
+              >
+                Terms of Service
+              </a>
+              <div className="text-gray-400 text-sm">
+                © 2024 UNGI SmartCards AI. Every swipe, Optimized.
+              </div>
             </div>
           </div>
         </div>

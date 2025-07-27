@@ -1,21 +1,37 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { CreditCard, Banknote, Gift, Activity, ArrowUpRight, ArrowDownRight, Building2 } from 'lucide-react';
 import { formatRupees } from '../../utils/currency';
-import ChatBot from '../../components/UI/ChatBot';
+import EnhancedChatBot from '../../components/UI/EnhancedChatBot';
+import { creditCardsAPI } from '../../services/api';
 
 const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
-  
-  // Mock data - replace with actual API calls
-  const stats = {
-    totalCards: 4,
-    totalBankAccounts: 3,
-    totalSpent: 284750.00,
-    totalRewards: 8542.50,
-    monthlySavings: 12.5,
-  };
+  const [stats, setStats] = useState({
+    totalCards: 0,
+    totalBankAccounts: 0,
+    totalSpent: 0,
+    totalRewards: 0,
+    monthlySavings: 0,
+  });
+  const [loading, setLoading] = useState(true);
+  const [isChatExpanded, setIsChatExpanded] = useState(false);
+
+  useEffect(() => {
+    const fetchDashboardStats = async () => {
+      try {
+        const data = await creditCardsAPI.getDashboardStats();
+        setStats(data);
+      } catch (error) {
+        console.error('Error fetching dashboard stats:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardStats();
+  }, []);
 
   const recentTransactions = [
     { id: 1, merchant: 'Amazon', amount: 7500.00, date: '2024-01-15', category: 'Shopping' },
@@ -127,20 +143,49 @@ const DashboardPage: React.FC = () => {
       </motion.div>
 
       {/* Main Content Grid - Natural content flow */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <motion.div 
+        className={`grid gap-4 ${isChatExpanded ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-3'}`}
+        layout
+        transition={{ duration: 0.3, ease: "easeInOut" }}
+        {...({} as any)}
+      >
         {/* ChatBot */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="lg:col-span-2"
+          className={isChatExpanded ? 'col-span-1' : 'lg:col-span-2'}
           {...({} as any)}
         >
-          <ChatBot />
+          <div className="relative">
+            {/* Expand/Collapse Button */}
+            <button
+              onClick={() => setIsChatExpanded(!isChatExpanded)}
+              className="absolute top-2 right-2 z-10 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-200"
+              title={isChatExpanded ? "Collapse chat" : "Expand chat"}
+            >
+              {isChatExpanded ? (
+                <svg className="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                </svg>
+              )}
+            </button>
+            <EnhancedChatBot />
+            {isChatExpanded && (
+              <div className="absolute top-2 left-2 z-10 px-3 py-1 bg-primary-600 text-white text-xs font-medium rounded-full">
+                Full Screen Chat
+              </div>
+            )}
+          </div>
         </motion.div>
 
-        {/* Right Column */}
-        <div className="space-y-4">
+        {/* Right Column - Hidden when chat is expanded */}
+        {!isChatExpanded && (
+          <div className="space-y-4">
           {/* Top Performing Cards - More compact */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -213,7 +258,8 @@ const DashboardPage: React.FC = () => {
             </div>
           </motion.div>
         </div>
-      </div>
+        )}
+      </motion.div>
     </div>
   );
 };

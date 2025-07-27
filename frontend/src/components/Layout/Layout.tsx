@@ -1,5 +1,7 @@
 import React from 'react';
 import Header from './Header';
+import Footer from './Footer';
+import Breadcrumb from './Breadcrumb';
 import { useAuth } from '../../hooks/useAuth';
 
 interface LayoutProps {
@@ -10,11 +12,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { isAuthenticated } = useAuth();
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
       {isAuthenticated && <Header />}
-      <main className={isAuthenticated ? 'pt-4' : ''}>
+      {isAuthenticated && <Breadcrumb />}
+      <main className="flex-1">
         {children}
       </main>
+      {isAuthenticated && <Footer />}
     </div>
   );
 };

@@ -121,6 +121,7 @@ const AddCardPage: React.FC = () => {
         reward_rate_general: 1.0,
         is_default: false,
         is_primary: false,
+        card_master_data_id: card.id, // Link to master data
       };
 
       await creditCardsAPI.addCard(quickCardData);
@@ -193,7 +194,14 @@ const AddCardPage: React.FC = () => {
     try {
       setSubmitting(true);
       setError(null);
-      await creditCardsAPI.addCard(formData);
+      
+      // Add master card ID if a master card is selected
+      const cardDataToSubmit = {
+        ...formData,
+        ...(selectedMasterCard && { card_master_data_id: selectedMasterCard.id })
+      };
+      
+      await creditCardsAPI.addCard(cardDataToSubmit);
       setSuccess(true);
       setTimeout(() => {
         navigate('/cards');

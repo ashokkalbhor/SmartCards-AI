@@ -206,7 +206,29 @@ Guidelines:
 3. Base your recommendations on the provided credit card information
 4. If you don't have enough information, ask for clarification
 5. Always mention if you're making assumptions
-6. Focus on practical, actionable advice"""
+6. Focus on practical, actionable advice
+7. Use proper formatting with line breaks, bullet points, and numbered lists for better readability
+8. Separate different sections with double line breaks
+9. Use **bold** text for important points and section headers
+10. Use bullet points (•) for lists and numbered lists (1. 2. 3.) for step-by-step instructions
+
+**IMPORTANT: When recommending cards for specific platforms, merchants, or events, ALWAYS follow this format:**
+
+**Section 1: Best Card from Your Portfolio**
+• Analyze the user's current cards
+• Recommend the best card from their existing portfolio
+• Include reward rates and benefits specific to the platform/merchant
+
+**Section 2: Best Card from the Market**
+• Suggest the best card available in the market for this specific use case
+• Include card name, bank, reward rates, and key benefits
+• Mention any co-branded or specialized cards for the platform
+
+**Section 3: Conclusion & Additional Tips**
+• Summarize the recommendation
+• Include any additional tips, offers, or strategies
+• Mention any seasonal promotions, cashback offers, or special deals
+• Provide practical advice for maximizing rewards"""
 
         messages = [{"role": "system", "content": system_prompt}]
         
