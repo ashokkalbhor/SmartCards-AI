@@ -28,6 +28,8 @@ class Settings(BaseSettings):
         "http://localhost:3001",
         "http://127.0.0.1:3000",
         "http://127.0.0.1:3001",
+        "https://smartcards-ai-frontend.onrender.com",
+        "https://*.onrender.com",
     ]
     
     # Allowed Hosts
