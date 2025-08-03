@@ -26,6 +26,7 @@ aiohttp==3.9.1
 
 # CORS and middleware
 fastapi-cors==0.0.6
+slowapi==0.1.9
 
 # Environment and configuration
 python-dotenv==1.0.0
