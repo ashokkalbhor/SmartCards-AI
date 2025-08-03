@@ -3,16 +3,9 @@ services:
   - type: web
     name: smartcards-ai-backend
     env: docker
-    dockerfilePath: ./backend/Dockerfile
-    dockerContext: ./backend
+    dockerfilePath: backend/Dockerfile
     plan: free
     envVars:
-      - key: DATABASE_URL
-        value: postgresql://smartcards_user:smartcards_password@postgres:5432/smartcards_ai
-      - key: ASYNC_DATABASE_URL
-        value: postgresql+asyncpg://smartcards_user:smartcards_password@postgres:5432/smartcards_ai
-      - key: REDIS_URL
-        value: redis://redis:6379
       - key: SECRET_KEY
         generateValue: true
       - key: ENVIRONMENT
@@ -28,8 +21,7 @@ services:
   - type: web
     name: smartcards-ai-frontend
     env: docker
-    dockerfilePath: ./frontend/Dockerfile
-    dockerContext: ./frontend
+    dockerfilePath: frontend/Dockerfile
     plan: free
     envVars:
       - key: REACT_APP_API_URL
