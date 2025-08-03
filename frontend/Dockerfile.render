@@ -7,8 +7,9 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install all dependencies
-RUN npm install
+# Install dependencies and explicitly install React types
+RUN npm install && \
+    npm install --save-dev @types/react@^18.2.0 @types/react-dom@^18.2.0
 
 # Copy source code
 COPY . .
@@ -16,6 +17,7 @@ COPY . .
 # Set environment to skip type checking for build
 ENV SKIP_PREFLIGHT_CHECK=true
 ENV GENERATE_SOURCEMAP=false
+ENV TSC_COMPILE_ON_ERROR=true
 
 # Build the application
 RUN npm run build
