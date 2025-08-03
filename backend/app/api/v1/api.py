@@ -1,6 +1,8 @@
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import auth, users, credit_cards, merchants, transactions, rewards, recommendations, chatbot, card_master_data, enhanced_chatbot
+from app.api.v1.endpoints import auth, users, credit_cards, merchants, transactions, rewards, recommendations, card_master_data
+# Temporarily disabled AI endpoints for deployment
+# from app.api.v1.endpoints import chatbot, enhanced_chatbot
 
 api_router = APIRouter()
 
@@ -12,7 +14,8 @@ api_router.include_router(merchants.router, prefix="/merchants", tags=["merchant
 api_router.include_router(transactions.router, prefix="/transactions", tags=["transactions"])
 api_router.include_router(rewards.router, prefix="/rewards", tags=["rewards"])
 api_router.include_router(recommendations.router, prefix="/recommendations", tags=["recommendations"])
-api_router.include_router(chatbot.router, prefix="/chatbot", tags=["chatbot"])
 api_router.include_router(card_master_data.router, prefix="/card-master-data", tags=["card-master-data"])
-api_router.include_router(enhanced_chatbot.router, prefix="/enhanced-chatbot", tags=["enhanced-chatbot"]) 
+# Temporarily disabled AI endpoints
+# api_router.include_router(chatbot.router, prefix="/chatbot", tags=["chatbot"])
+# api_router.include_router(enhanced_chatbot.router, prefix="/enhanced-chatbot", tags=["enhanced-chatbot"]) 
  
