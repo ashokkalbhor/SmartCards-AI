@@ -7,11 +7,14 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install
+# Install all dependencies (including dev dependencies for build)
+RUN npm ci
 
 # Copy source code
 COPY . .
+
+# Ensure TypeScript types are available
+RUN npm install --save-dev @types/react @types/react-dom
 
 # Build the application
 RUN npm run build
