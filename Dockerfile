@@ -26,6 +26,9 @@ RUN pip install --no-cache-dir --upgrade pip \
 # Copy backend project
 COPY backend/ .
 
+# Copy database file
+COPY smartcards_ai.db ./smartcards_ai.db
+
 # Expose port
 EXPOSE 8000
 
