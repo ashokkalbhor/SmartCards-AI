@@ -26,6 +26,9 @@ RUN pip install --no-cache-dir --upgrade pip \
 # Copy backend project (includes database file)
 COPY backend/ .
 
+# Make startup script executable
+RUN chmod +x startup.py
+
 # Expose port
 EXPOSE 8000
 

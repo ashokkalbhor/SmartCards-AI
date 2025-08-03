@@ -105,9 +105,36 @@ async def startup_event():
     """Application startup event"""
     logger.info("Starting SmartCards AI API")
     
-    # Initialize database
-    from app.core.database import init_db
-    await init_db()
+    try:
+        # Run startup script for database initialization
+        import subprocess
+        import sys
+        from pathlib import Path
+        
+        backend_dir = Path(__file__).parent.parent
+        startup_script = backend_dir / "startup.py"
+        
+        if startup_script.exists():
+            logger.info("Running startup script for database initialization...")
+            result = subprocess.run(
+                [sys.executable, str(startup_script)],
+                capture_output=True,
+                text=True,
+                cwd=backend_dir
+            )
+            
+            if result.returncode != 0:
+                logger.warning(f"Startup script had issues: {result.stderr}")
+            else:
+                logger.info("Startup script completed successfully")
+        
+        # Initialize database (fallback)
+        from app.core.database import init_db
+        await init_db()
+        
+    except Exception as e:
+        logger.error(f"Startup error: {e}")
+        # Don't fail the startup, just log the error
     
     logger.info("SmartCards AI API started successfully")
 

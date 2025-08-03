@@ -76,16 +76,25 @@ async def init_db():
     """Initialize database tables"""
     try:
         # Import all models to ensure they are registered
-        from app.models import user, credit_card, transaction, merchant, reward, conversation
+        from app.models import user, credit_card, transaction, merchant, reward, conversation, card_master_data
         
-        # Create all tables
+        # Check if tables exist
         async with async_engine.begin() as conn:
+            # Get existing tables
+            from sqlalchemy import text
+            result = await conn.execute(text("SELECT name FROM sqlite_master WHERE type='table'"))
+            existing_tables = [row[0] for row in result.fetchall()]
+            
+            logger.info(f"Existing tables: {existing_tables}")
+            
+            # Create all tables if they don't exist
             await conn.run_sync(Base.metadata.create_all)
         
         logger.info("Database initialized successfully")
     except Exception as e:
         logger.error("Failed to initialize database", error=str(e))
-        raise
+        # Don't raise the exception, just log it
+        logger.warning("Continuing with startup despite database initialization error")
 
 
 async def close_db():
