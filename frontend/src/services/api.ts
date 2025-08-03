@@ -3,7 +3,7 @@ import axios from 'axios';
 // Create axios instance with base configuration
 const api = axios.create({
   baseURL: process.env.NODE_ENV === 'production' 
-    ? 'https://your-railway-app.railway.app/api/v1'  // Replace with your Railway URL
+    ? 'https://smartcards-ai-2.onrender.com/api/v1'  // Render backend URL
     : 'http://localhost:8000/api/v1',
   headers: {
     'Content-Type': 'application/json',
@@ -36,9 +36,14 @@ api.interceptors.response.use(
       try {
         const refreshToken = localStorage.getItem('refresh_token');
         if (refreshToken) {
-          const response = await axios.post('http://localhost:8000/api/v1/auth/refresh', {
+                  const response = await axios.post(
+          process.env.NODE_ENV === 'production' 
+            ? 'https://smartcards-ai-2.onrender.com/api/v1/auth/refresh'
+            : 'http://localhost:8000/api/v1/auth/refresh',
+          {
             refresh_token: refreshToken,
-          });
+          }
+        );
 
           const { access_token, refresh_token } = response.data;
           localStorage.setItem('access_token', access_token);
