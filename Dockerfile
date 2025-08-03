@@ -23,11 +23,8 @@ COPY backend/requirements-minimal.txt requirements.txt
 RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt
 
-# Copy backend project
+# Copy backend project (includes database file)
 COPY backend/ .
-
-# Copy database file
-COPY smartcards_ai.db ./smartcards_ai.db
 
 # Expose port
 EXPOSE 8000
