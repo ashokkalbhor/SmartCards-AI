@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { CreditCard, Banknote, Gift, Activity, ArrowUpRight, ArrowDownRight, Building2 } from 'lucide-react';
+import { CreditCard, Banknote, Gift, Activity, ArrowUpRight, Building2, Users } from 'lucide-react';
 import { formatRupees } from '../../utils/currency';
 import EnhancedChatBot from '../../components/UI/EnhancedChatBot';
 import { creditCardsAPI } from '../../services/api';
@@ -15,7 +15,6 @@ const DashboardPage: React.FC = () => {
     totalRewards: 0,
     monthlySavings: 0,
   });
-  const [loading, setLoading] = useState(true);
   const [isChatExpanded, setIsChatExpanded] = useState(false);
 
   useEffect(() => {
@@ -25,8 +24,6 @@ const DashboardPage: React.FC = () => {
         setStats(data);
       } catch (error) {
         console.error('Error fetching dashboard stats:', error);
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -70,7 +67,7 @@ const DashboardPage: React.FC = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 flex-shrink-0"
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3 flex-shrink-0"
         {...({} as any)}
       >
         {/* Total Cards - Made clickable */}
@@ -137,6 +134,22 @@ const DashboardPage: React.FC = () => {
             </div>
             <div className="p-2 bg-orange-100 dark:bg-orange-900 rounded-lg">
               <ArrowUpRight className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+            </div>
+          </div>
+        </div>
+
+        {/* Community - New card for viewing all cards */}
+        <div 
+          onClick={() => navigate('/all-cards')}
+          className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 cursor-pointer hover:shadow-md hover:border-teal-300 dark:hover:border-teal-600 transition-all duration-200 group"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Community</p>
+              <p className="text-xl font-bold text-gray-900 dark:text-white">View All</p>
+            </div>
+            <div className="p-2 bg-teal-100 dark:bg-teal-900 rounded-lg group-hover:bg-teal-200 dark:group-hover:bg-teal-800 transition-colors">
+              <Users className="h-5 w-5 text-teal-600 dark:text-teal-400" />
             </div>
           </div>
         </div>

@@ -4,7 +4,7 @@ import axios from 'axios';
 const api = axios.create({
   baseURL: process.env.NODE_ENV === 'production' 
     ? 'https://smartcards-ai-2.onrender.com/api/v1'  // Render backend URL
-    : 'http://localhost:8000/api/v1',
+    : 'http://localhost:8001/api/v1',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -39,7 +39,7 @@ api.interceptors.response.use(
                   const response = await axios.post(
           process.env.NODE_ENV === 'production' 
             ? 'https://smartcards-ai-2.onrender.com/api/v1/auth/refresh'
-            : 'http://localhost:8000/api/v1/auth/refresh',
+            : 'http://localhost:8001/api/v1/auth/refresh',
           {
             refresh_token: refreshToken,
           }
@@ -193,6 +193,11 @@ export const cardMasterDataAPI = {
     return response.data;
   },
 
+  getCardById: async (cardId: string) => {
+    const response = await api.get(`/card-master-data/cards/${cardId}`);
+    return response.data;
+  },
+
   getBanks: async () => {
     const response = await api.get('/card-master-data/banks');
     return response.data;
@@ -205,6 +210,103 @@ export const cardMasterDataAPI = {
 
   getMerchants: async () => {
     const response = await api.get('/card-master-data/merchants');
+    return response.data;
+  },
+};
+
+// Card Reviews API
+export const cardReviewsAPI = {
+  getCardReviews: async (cardId: string, params?: any) => {
+    const queryParams = new URLSearchParams();
+    if (params?.skip) queryParams.append('skip', params.skip.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    
+    const response = await api.get(`/reviews/cards/${cardId}/reviews?${queryParams.toString()}`);
+    return response.data;
+  },
+  
+  createReview: async (cardId: string, reviewData: any) => {
+    const response = await api.post(`/reviews/cards/${cardId}/reviews`, reviewData);
+    return response.data;
+  },
+  
+  updateReview: async (reviewId: string, reviewData: any) => {
+    const response = await api.put(`/reviews/${reviewId}`, reviewData);
+    return response.data;
+  },
+  
+  deleteReview: async (reviewId: string) => {
+    const response = await api.delete(`/reviews/${reviewId}`);
+    return response.data;
+  },
+  
+  voteOnReview: async (reviewId: string, voteType: 'helpful' | 'not_helpful') => {
+    const response = await api.post(`/reviews/${reviewId}/vote`, { vote_type: voteType });
+    return response.data;
+  },
+};
+
+// Community API
+export const communityAPI = {
+  // Posts
+  getCardPosts: async (cardId: string, params?: {
+    skip?: number;
+    limit?: number;
+    sort_by?: 'newest' | 'oldest' | 'votes';
+  }) => {
+    const queryParams = new URLSearchParams();
+    if (params?.skip) queryParams.append('skip', params.skip.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.sort_by) queryParams.append('sort_by', params.sort_by);
+    
+    const response = await api.get(`/community/cards/${cardId}/posts?${queryParams.toString()}`);
+    return response.data;
+  },
+
+  createPost: async (cardId: string, postData: { title: string; body?: string }) => {
+    const response = await api.post(`/community/cards/${cardId}/posts`, postData);
+    return response.data;
+  },
+
+  getPostDetail: async (postId: string) => {
+    const response = await api.get(`/community/posts/${postId}`);
+    return response.data;
+  },
+
+  updatePost: async (postId: string, postData: { title: string; body?: string }) => {
+    const response = await api.put(`/community/posts/${postId}`, postData);
+    return response.data;
+  },
+
+  deletePost: async (postId: string) => {
+    const response = await api.delete(`/community/posts/${postId}`);
+    return response.data;
+  },
+
+  // Comments
+  createComment: async (postId: string, commentData: { body: string; parent_id?: number }) => {
+    const response = await api.post(`/community/posts/${postId}/comments`, commentData);
+    return response.data;
+  },
+
+  updateComment: async (commentId: string, commentData: { body: string }) => {
+    const response = await api.put(`/community/comments/${commentId}`, commentData);
+    return response.data;
+  },
+
+  deleteComment: async (commentId: string) => {
+    const response = await api.delete(`/community/comments/${commentId}`);
+    return response.data;
+  },
+
+  // Voting
+  voteOnPost: async (postId: string, voteType: 'upvote' | 'downvote') => {
+    const response = await api.post(`/community/posts/${postId}/vote`, { vote_type: voteType });
+    return response.data;
+  },
+
+  voteOnComment: async (commentId: string, voteType: 'upvote' | 'downvote') => {
+    const response = await api.post(`/community/comments/${commentId}/vote`, { vote_type: voteType });
     return response.data;
   },
 };

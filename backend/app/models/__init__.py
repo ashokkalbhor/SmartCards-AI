@@ -5,6 +5,8 @@ from .transaction import Transaction
 from .reward import Reward
 from .conversation import Conversation, ConversationMessage, CardRecommendation
 from .card_master_data import CardMasterData, CardSpendingCategory, CardMerchantReward, CardTierEnum
+from .card_review import CardReview, ReviewVote
+from .community import CommunityPost, CommunityComment, PostVote, CommentVote
 
 __all__ = [
     "User",
@@ -18,5 +20,11 @@ __all__ = [
     "CardMasterData",
     "CardSpendingCategory",
     "CardMerchantReward",
-    "CardTierEnum"
+    "CardTierEnum",
+    "CardReview",
+    "ReviewVote",
+    "CommunityPost",
+    "CommunityComment",
+    "PostVote",
+    "CommentVote"
 ] 

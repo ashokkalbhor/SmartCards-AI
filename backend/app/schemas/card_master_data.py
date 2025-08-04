@@ -5,10 +5,10 @@ from enum import Enum
 
 
 class CardTierEnum(str, Enum):
-    BASIC = "basic"
-    PREMIUM = "premium"
-    SUPER_PREMIUM = "super_premium"
-    ELITE = "elite"
+    BASIC = "BASIC"
+    PREMIUM = "PREMIUM"
+    SUPER_PREMIUM = "SUPER_PREMIUM"
+    ELITE = "ELITE"
 
 
 class RewardTypeEnum(str, Enum):

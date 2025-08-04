@@ -20,11 +20,14 @@ import AddCardPage from './pages/Cards/AddCardPage';
 import CardDetailPage from './pages/Cards/CardDetailPage';
 import EditCardPage from './pages/Cards/EditCardPage';
 import CardComparisonPage from './pages/Cards/CardComparisonPage';
+import AllCardsPage from './pages/Cards/AllCardsPage';
 import TransactionsPage from './pages/Transactions/TransactionsPage';
 import RewardsPage from './pages/Rewards/RewardsPage';
 import RecommendationsPage from './pages/Recommendations/RecommendationsPage';
 import ProfilePage from './pages/Profile/ProfilePage';
 import SettingsPage from './pages/Settings/SettingsPage';
+import CommunityPage from './pages/Community/CommunityPage';
+import PostDetailPage from './pages/Community/PostDetailPage';
 
 // Hooks
 import { useAuth } from './hooks/useAuth';
@@ -124,6 +127,22 @@ function AppContent() {
             </ProtectedRoute>
           } />
 
+          <Route path="/card/:cardId" element={
+            <ProtectedRoute>
+              <Layout>
+                <CardDetailPage />
+              </Layout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/all-cards" element={
+            <ProtectedRoute>
+              <Layout>
+                <AllCardsPage />
+              </Layout>
+            </ProtectedRoute>
+          } />
+
           <Route path="/transactions" element={
             <ProtectedRoute>
               <Layout>
@@ -160,6 +179,23 @@ function AppContent() {
             <ProtectedRoute>
               <Layout>
                 <SettingsPage />
+              </Layout>
+            </ProtectedRoute>
+          } />
+
+          {/* Community Routes */}
+          <Route path="/community/:cardId" element={
+            <ProtectedRoute>
+              <Layout>
+                <CommunityPage />
+              </Layout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/community/post/:postId" element={
+            <ProtectedRoute>
+              <Layout>
+                <PostDetailPage />
               </Layout>
             </ProtectedRoute>
           } />

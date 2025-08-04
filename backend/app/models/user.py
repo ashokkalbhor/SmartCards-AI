@@ -49,6 +49,12 @@ class User(Base):
     transactions = relationship("Transaction", back_populates="user", cascade="all, delete-orphan")
     rewards = relationship("Reward", back_populates="user", cascade="all, delete-orphan")
     conversations = relationship("Conversation", back_populates="user", cascade="all, delete-orphan")
+    card_reviews = relationship("CardReview", back_populates="user", cascade="all, delete-orphan")
+    review_votes = relationship("ReviewVote", back_populates="user", cascade="all, delete-orphan")
+    community_posts = relationship("CommunityPost", back_populates="user", cascade="all, delete-orphan")
+    community_comments = relationship("CommunityComment", back_populates="user", cascade="all, delete-orphan")
+    post_votes = relationship("PostVote", back_populates="user", cascade="all, delete-orphan")
+    comment_votes = relationship("CommentVote", back_populates="user", cascade="all, delete-orphan")
     
     def __repr__(self):
         return f"<User(id={self.id}, email='{self.email}')>"

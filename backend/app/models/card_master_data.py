@@ -95,6 +95,8 @@ class CardMasterData(Base):
     spending_categories = relationship("CardSpendingCategory", back_populates="card_master", cascade="all, delete-orphan")
     merchant_rewards = relationship("CardMerchantReward", back_populates="card_master", cascade="all, delete-orphan")
     user_credit_cards = relationship("CreditCard", back_populates="card_master_data")
+    reviews = relationship("CardReview", back_populates="card_master", cascade="all, delete-orphan")
+    community_posts = relationship("CommunityPost", back_populates="card_master", cascade="all, delete-orphan")
     
     def __repr__(self):
         return f"<CardMasterData(id={self.id}, bank='{self.bank_name}', card='{self.card_name}')>"
