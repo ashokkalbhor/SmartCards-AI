@@ -1,4 +1,5 @@
 from typing import List, Optional
+from app.core.card_templates import create_default_spending_categories_for_card, create_default_merchant_rewards_for_card
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import and_, or_
@@ -70,7 +71,7 @@ def get_card_master_data(
 
 @router.get("/cards/{card_id}", response_model=CardMasterDataResponse)
 def get_card_master_data_by_id(card_id: int, db: Session = Depends(get_db)):
-    """Get specific card master data by ID"""
+    """Get specific card master data by ID with editable defaults"""
     try:
         # First try to get the card without joinedload to see if the card exists
         card = db.query(CardMasterData).filter(CardMasterData.id == card_id).first()
@@ -83,6 +84,26 @@ def get_card_master_data_by_id(card_id: int, db: Session = Depends(get_db)):
             joinedload(CardMasterData.spending_categories),
             joinedload(CardMasterData.merchant_rewards)
         ).filter(CardMasterData.id == card_id).first()
+        
+        # Check if card has spending categories and merchant rewards
+        # If not, create default editable templates
+        if not card_with_relations.spending_categories:
+            print(f"Creating default spending categories for card {card_id}")
+            card_with_relations.spending_categories = create_default_spending_categories_for_card(
+                card_id, 
+                card_with_relations.card_tier or "basic", 
+                card_with_relations.bank_name, 
+                db
+            )
+        
+        if not card_with_relations.merchant_rewards:
+            print(f"Creating default merchant rewards for card {card_id}")
+            card_with_relations.merchant_rewards = create_default_merchant_rewards_for_card(
+                card_id, 
+                card_with_relations.card_tier or "basic", 
+                card_with_relations.bank_name, 
+                db
+            )
         
         # Convert to dict and back to handle None values properly
         card_dict = {
