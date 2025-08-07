@@ -4,7 +4,7 @@ import axios from 'axios';
 const api = axios.create({
   baseURL: process.env.NODE_ENV === 'production' 
     ? 'https://smartcards-ai-2.onrender.com/api/v1'  // Render backend URL
-    : 'http://localhost:8001/api/v1',
+    : 'http://localhost:8000/api/v1',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -39,7 +39,7 @@ api.interceptors.response.use(
                   const response = await axios.post(
           process.env.NODE_ENV === 'production' 
             ? 'https://smartcards-ai-2.onrender.com/api/v1/auth/refresh'
-            : 'http://localhost:8001/api/v1/auth/refresh',
+            : 'http://localhost:8000/api/v1/auth/refresh',
           {
             refresh_token: refreshToken,
           }
@@ -135,6 +135,11 @@ export const creditCardsAPI = {
 
   getDashboardStats: async () => {
     const response = await api.get('/credit-cards/dashboard/stats');
+    return response.data;
+  },
+
+  getPopularCards: async (limit: number = 5) => {
+    const response = await api.get(`/credit-cards/popular-cards?limit=${limit}`);
     return response.data;
   },
 };
@@ -307,6 +312,217 @@ export const communityAPI = {
 
   voteOnComment: async (commentId: string, voteType: 'upvote' | 'downvote') => {
     const response = await api.post(`/community/comments/${commentId}/vote`, { vote_type: voteType });
+    return response.data;
+  },
+
+  getTopDiscussions: async (limit: number = 5) => {
+    const response = await api.get(`/community/top-discussions?limit=${limit}`);
+    return response.data;
+  },
+};
+
+// Admin API
+export const adminAPI = {
+  getStats: async () => {
+    const response = await api.get('/admin/stats');
+    return response.data;
+  },
+
+  getUsers: async (params?: {
+    skip?: number;
+    limit?: number;
+    search?: string;
+    role_filter?: string;
+  }) => {
+    const queryParams = new URLSearchParams();
+    if (params?.skip) queryParams.append('skip', params.skip.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.search) queryParams.append('search', params.search);
+    if (params?.role_filter) queryParams.append('role_filter', params.role_filter);
+    
+    const response = await api.get(`/admin/users?${queryParams.toString()}`);
+    return response.data;
+  },
+
+  getModeratorRequests: async (params?: {
+    status_filter?: string;
+    skip?: number;
+    limit?: number;
+  }) => {
+    const queryParams = new URLSearchParams();
+    if (params?.status_filter) queryParams.append('status_filter', params.status_filter);
+    if (params?.skip) queryParams.append('skip', params.skip.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    
+    const response = await api.get(`/admin/moderator-requests?${queryParams.toString()}`);
+    return response.data;
+  },
+
+  reviewModeratorRequest: async (requestId: number, reviewData: { status: string }) => {
+    const response = await api.put(`/admin/moderator-requests/${requestId}`, reviewData);
+    return response.data;
+  },
+
+  getEditSuggestions: async (params?: {
+    status_filter?: string;
+    field_type?: string;
+    skip?: number;
+    limit?: number;
+  }) => {
+    const queryParams = new URLSearchParams();
+    if (params?.status_filter) queryParams.append('status_filter', params.status_filter);
+    if (params?.field_type) queryParams.append('field_type', params.field_type);
+    if (params?.skip) queryParams.append('skip', params.skip.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    
+    const response = await api.get(`/admin/edit-suggestions?${queryParams.toString()}`);
+    return response.data;
+  },
+
+  reviewEditSuggestion: async (suggestionId: number, reviewData: { 
+    status: string; 
+    review_notes?: string;
+  }) => {
+    const response = await api.put(`/admin/edit-suggestions/${suggestionId}`, reviewData);
+    return response.data;
+  },
+
+  getCardDocuments: async (params?: {
+    status_filter?: string;
+    document_type?: string;
+    skip?: number;
+    limit?: number;
+  }) => {
+    const queryParams = new URLSearchParams();
+    if (params?.status_filter) queryParams.append('status_filter', params.status_filter);
+    if (params?.document_type) queryParams.append('document_type', params.document_type);
+    if (params?.skip) queryParams.append('skip', params.skip.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    
+    const response = await api.get(`/admin/card-documents?${queryParams.toString()}`);
+    return response.data;
+  },
+
+  reviewCardDocument: async (documentId: number, reviewData: { 
+    status: string; 
+    review_notes?: string;
+  }) => {
+    const response = await api.put(`/admin/card-documents/${documentId}`, reviewData);
+    return response.data;
+  },
+};
+
+// Moderator API
+export const moderatorAPI = {
+  getStats: async () => {
+    const response = await api.get('/moderator/stats');
+    return response.data;
+  },
+
+  getEditSuggestions: async (params?: {
+    status_filter?: string;
+    field_type?: string;
+    skip?: number;
+    limit?: number;
+  }) => {
+    const queryParams = new URLSearchParams();
+    if (params?.status_filter) queryParams.append('status_filter', params.status_filter);
+    if (params?.field_type) queryParams.append('field_type', params.field_type);
+    if (params?.skip) queryParams.append('skip', params.skip.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    
+    const response = await api.get(`/moderator/edit-suggestions?${queryParams.toString()}`);
+    return response.data;
+  },
+
+  reviewSuggestion: async (suggestionId: number, reviewData: { 
+    status: string; 
+    review_notes?: string;
+  }) => {
+    const response = await api.put(`/moderator/edit-suggestions/${suggestionId}`, reviewData);
+    return response.data;
+  },
+};
+
+// User Roles API
+export const userRolesAPI = {
+  requestModerator: async (requestData: { request_reason?: string }) => {
+    const response = await api.post('/user-roles/request-moderator', requestData);
+    return response.data;
+  },
+
+  getMyModeratorRequest: async () => {
+    const response = await api.get('/user-roles/my-moderator-request');
+    return response.data;
+  },
+
+  getMyRole: async () => {
+    const response = await api.get('/user-roles/my-role');
+    return response.data;
+  },
+
+  submitEditSuggestion: async (cardId: number, suggestionData: {
+    field_type: string;
+    field_name: string;
+    new_value: string;
+    suggestion_reason?: string;
+  }) => {
+    const response = await api.post(`/user-roles/edit-suggestions?card_id=${cardId}`, suggestionData);
+    return response.data;
+  },
+
+  getMySuggestions: async (params?: {
+    status_filter?: string;
+    skip?: number;
+    limit?: number;
+  }) => {
+    const queryParams = new URLSearchParams();
+    if (params?.status_filter) queryParams.append('status_filter', params.status_filter);
+    if (params?.skip) queryParams.append('skip', params.skip.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    
+    const response = await api.get(`/user-roles/my-suggestions?${queryParams.toString()}`);
+    return response.data;
+  },
+
+  getMySuggestionsStats: async () => {
+    const response = await api.get('/user-roles/my-suggestions/stats');
+    return response.data;
+  },
+};
+
+// Card Documents API
+export const cardDocumentsAPI = {
+  submitDocument: async (cardId: number, formData: FormData) => {
+    const response = await api.post(`/card-documents/submit?card_id=${cardId}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
+  getMySubmissions: async (params?: {
+    status_filter?: string;
+    skip?: number;
+    limit?: number;
+  }) => {
+    const queryParams = new URLSearchParams();
+    if (params?.status_filter) queryParams.append('status_filter', params.status_filter);
+    if (params?.skip) queryParams.append('skip', params.skip.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    
+    const response = await api.get(`/card-documents/my-submissions?${queryParams.toString()}`);
+    return response.data;
+  },
+
+  getMySubmissionsStats: async () => {
+    const response = await api.get('/card-documents/my-submissions/stats');
+    return response.data;
+  },
+
+  getApprovedDocuments: async (cardId: number) => {
+    const response = await api.get(`/card-documents/approved/${cardId}`);
     return response.data;
   },
 };

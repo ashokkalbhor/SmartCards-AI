@@ -59,11 +59,11 @@ const CardsPage: React.FC = () => {
   }, []);
 
   const handleViewCard = (cardId: number) => {
-    navigate(`/cards/${cardId}`);
+    navigate(`/card/${cardId}`);
   };
 
   const handleEditCard = (cardId: number) => {
-    navigate(`/cards/${cardId}/edit`);
+    navigate(`/card/${cardId}`);
   };
 
   const handleDeleteCard = async (cardId: number) => {

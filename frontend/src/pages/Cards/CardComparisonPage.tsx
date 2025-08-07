@@ -267,7 +267,7 @@ const CardComparisonPage: React.FC = () => {
         font-family: 'Inter', system-ui, sans-serif;
       `;
       brandingFooter.innerHTML = `
-        <div>© 2024 UNGI SmartCards AI. Every swipe, Optimized.</div>
+                    <div>© 2025 UNGI SmartCards AI. Every swipe, Optimized.</div>
         <div style="font-size: 11px; color: #9ca3af; margin-top: 4px;">Visit us at UNGI SmartCards AI for personalized credit card recommendations</div>
       `;
       
@@ -583,7 +583,7 @@ const CardComparisonPage: React.FC = () => {
             {/* Branding Footer - Only visible in exports */}
             <div className="hidden print:block p-4 border-t border-gray-200 dark:border-gray-700 text-center">
               <div className="text-sm text-gray-500 dark:text-gray-400">
-                © 2024 UNGI SmartCards AI. Every swipe, Optimized.
+                © 2025 UNGI SmartCards AI. Every swipe, Optimized.
               </div>
               <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                 Visit us at UNGI SmartCards AI for personalized credit card recommendations

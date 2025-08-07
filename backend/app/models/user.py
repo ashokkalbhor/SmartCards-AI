@@ -1,7 +1,7 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, Float
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Float, Text, ForeignKey
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
-from passlib.hash import bcrypt
+import bcrypt
 
 from app.core.database import Base
 
@@ -55,6 +55,13 @@ class User(Base):
     community_comments = relationship("CommunityComment", back_populates="user", cascade="all, delete-orphan")
     post_votes = relationship("PostVote", back_populates="user", cascade="all, delete-orphan")
     comment_votes = relationship("CommentVote", back_populates="user", cascade="all, delete-orphan")
+    
+    # New relationships for role and suggestion system
+    roles = relationship("UserRole", foreign_keys="UserRole.user_id", back_populates="user", cascade="all, delete-orphan")
+    moderator_requests = relationship("ModeratorRequest", foreign_keys="ModeratorRequest.user_id", back_populates="user", cascade="all, delete-orphan")
+    edit_suggestions = relationship("EditSuggestion", foreign_keys="EditSuggestion.user_id", back_populates="user", cascade="all, delete-orphan")
+    audit_logs = relationship("AuditLog", back_populates="user", cascade="all, delete-orphan")
+    card_documents = relationship("CardDocument", foreign_keys="CardDocument.user_id", back_populates="user", cascade="all, delete-orphan")
     
     def __repr__(self):
         return f"<User(id={self.id}, email='{self.email}')>"

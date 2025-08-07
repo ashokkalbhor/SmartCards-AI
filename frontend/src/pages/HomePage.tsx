@@ -194,7 +194,7 @@ const HomePage: React.FC = () => {
                 Terms of Service
               </a>
               <div className="text-gray-400 text-sm">
-                © 2024 UNGI SmartCards AI. Every swipe, Optimized.
+                © 2025 UNGI SmartCards AI. Every swipe, Optimized.
               </div>
             </div>
           </div>

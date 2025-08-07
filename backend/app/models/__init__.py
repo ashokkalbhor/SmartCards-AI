@@ -7,6 +7,10 @@ from .conversation import Conversation, ConversationMessage, CardRecommendation
 from .card_master_data import CardMasterData, CardSpendingCategory, CardMerchantReward, CardTierEnum
 from .card_review import CardReview, ReviewVote
 from .community import CommunityPost, CommunityComment, PostVote, CommentVote
+from .user_role import UserRole, ModeratorRequest
+from .edit_suggestion import EditSuggestion
+from .audit_log import AuditLog
+from .card_document import CardDocument
 
 __all__ = [
     "User",
@@ -26,5 +30,10 @@ __all__ = [
     "CommunityPost",
     "CommunityComment",
     "PostVote",
-    "CommentVote"
+    "CommentVote",
+    "UserRole",
+    "ModeratorRequest",
+    "EditSuggestion",
+    "AuditLog",
+    "CardDocument"
 ] 

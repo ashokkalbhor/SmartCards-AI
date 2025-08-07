@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { User, LogOut, Settings, ChevronDown } from 'lucide-react';
+import { User, LogOut, Settings, ChevronDown, Shield } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
 const Header: React.FC = () => {
@@ -136,6 +136,20 @@ const Header: React.FC = () => {
                 <Settings className="h-4 w-4" />
                 <span>Settings</span>
               </button>
+
+              {/* Admin Dashboard Link */}
+              {user?.email === 'ashokkalbhor@gmail.com' && (
+                <button
+                  onClick={() => {
+                    setIsUserMenuOpen(false);
+                    navigate('/admin');
+                  }}
+                  className="w-full flex items-center space-x-3 px-4 py-2 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                >
+                  <Shield className="h-4 w-4" />
+                  <span>Admin Dashboard</span>
+                </button>
+              )}
 
               <hr className="my-1 border-gray-200 dark:border-gray-700" />
 

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { CreditCard, Banknote, Gift, Activity, ArrowUpRight, Building2, Users } from 'lucide-react';
+import { CreditCard, Banknote, ArrowUpRight, Building2, Users, ThumbsUp, MessageSquare } from 'lucide-react';
 import { formatRupees } from '../../utils/currency';
 import EnhancedChatBot from '../../components/UI/EnhancedChatBot';
-import { creditCardsAPI } from '../../services/api';
+import { creditCardsAPI, communityAPI } from '../../services/api';
 
 const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
@@ -12,7 +12,6 @@ const DashboardPage: React.FC = () => {
     totalCards: 0,
     totalBankAccounts: 0,
     totalSpent: 0,
-    totalRewards: 0,
     monthlySavings: 0,
   });
   const [isChatExpanded, setIsChatExpanded] = useState(false);
@@ -27,21 +26,50 @@ const DashboardPage: React.FC = () => {
       }
     };
 
+    const fetchPopularCards = async () => {
+      try {
+        const data = await creditCardsAPI.getPopularCards(5);
+        setTopCards(data);
+      } catch (error) {
+        console.error('Error fetching popular cards:', error);
+      }
+    };
+
+    const fetchTopDiscussions = async () => {
+      try {
+        const data = await communityAPI.getTopDiscussions(5);
+        setTopDiscussions(data.discussions || []);
+      } catch (error) {
+        console.error('Error fetching top discussions:', error);
+      }
+    };
+
     fetchDashboardStats();
+    fetchPopularCards();
+    fetchTopDiscussions();
   }, []);
 
-  const recentTransactions = [
-    { id: 1, merchant: 'Amazon', amount: 7500.00, date: '2024-01-15', category: 'Shopping' },
-    { id: 2, merchant: 'Starbucks', amount: 395.00, date: '2024-01-15', category: 'Food' },
-    { id: 3, merchant: 'Shell', amount: 3780.00, date: '2024-01-14', category: 'Gas' },
-    { id: 4, merchant: 'Netflix', amount: 1330.00, date: '2024-01-14', category: 'Entertainment' },
-  ];
 
-  const topCards = [
-    { id: 1, name: 'HDFC Regalia Gold', rewards: 15680.00, percentage: 5.5 },
-    { id: 2, name: 'SBI Elite', rewards: 8945.00, percentage: 3.2 },
-    { id: 3, name: 'ICICI Amazon Pay', rewards: 3850.00, percentage: 1.8 },
-  ];
+
+  const [topCards, setTopCards] = useState<Array<{
+    id: number;
+    name: string;
+    holders: number;
+    percentage: number;
+  }>>([]);
+
+  const [topDiscussions, setTopDiscussions] = useState<Array<{
+    id: number;
+    title: string;
+    body?: string;
+    user_name: string;
+    card_name: string;
+    upvotes: number;
+    downvotes: number;
+    comment_count: number;
+    engagement_score: number;
+    time_ago: string;
+  }>>([]);
 
   return (
     <div className="min-h-screen flex flex-col p-4 space-y-4">
@@ -86,58 +114,6 @@ const DashboardPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Total Bank Accounts */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Total Bank Accounts</p>
-              <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.totalBankAccounts}</p>
-            </div>
-            <div className="p-2 bg-indigo-100 dark:bg-indigo-900 rounded-lg">
-              <Building2 className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-            </div>
-          </div>
-        </div>
-
-        {/* Total Spent */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Total Spent</p>
-              <p className="text-xl font-bold text-gray-900 dark:text-white">{formatRupees(stats.totalSpent)}</p>
-            </div>
-            <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-              <Banknote className="h-5 w-5 text-green-600 dark:text-green-400" />
-            </div>
-          </div>
-        </div>
-
-        {/* Total Rewards */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Total Rewards</p>
-              <p className="text-xl font-bold text-gray-900 dark:text-white">{formatRupees(stats.totalRewards)}</p>
-            </div>
-            <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
-              <Gift className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-            </div>
-          </div>
-        </div>
-
-        {/* Monthly Savings */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Monthly Savings</p>
-              <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.monthlySavings}%</p>
-            </div>
-            <div className="p-2 bg-orange-100 dark:bg-orange-900 rounded-lg">
-              <ArrowUpRight className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-            </div>
-          </div>
-        </div>
-
         {/* Community - New card for viewing all cards */}
         <div 
           onClick={() => navigate('/all-cards')}
@@ -150,6 +126,57 @@ const DashboardPage: React.FC = () => {
             </div>
             <div className="p-2 bg-teal-100 dark:bg-teal-900 rounded-lg group-hover:bg-teal-200 dark:group-hover:bg-teal-800 transition-colors">
               <Users className="h-5 w-5 text-teal-600 dark:text-teal-400" />
+            </div>
+          </div>
+        </div>
+
+        {/* Total Bank Accounts */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 relative">
+          {/* Coming Soon Banner */}
+          <div className="absolute -top-2 -right-2 bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md z-10">
+            COMING SOON
+          </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Total Bank Accounts</p>
+              <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.totalBankAccounts}</p>
+            </div>
+            <div className="p-2 bg-indigo-100 dark:bg-indigo-900 rounded-lg">
+              <Building2 className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+            </div>
+          </div>
+        </div>
+
+        {/* Total Spent */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 relative">
+          {/* Coming Soon Banner */}
+          <div className="absolute -top-2 -right-2 bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md z-10">
+            COMING SOON
+          </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Total Spent</p>
+              <p className="text-xl font-bold text-gray-900 dark:text-white">{formatRupees(stats.totalSpent)}</p>
+            </div>
+            <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+              <Banknote className="h-5 w-5 text-green-600 dark:text-green-400" />
+            </div>
+          </div>
+        </div>
+
+        {/* Monthly Savings */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 relative">
+          {/* Coming Soon Banner */}
+          <div className="absolute -top-2 -right-2 bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md z-10">
+            COMING SOON
+          </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Monthly Savings</p>
+              <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.monthlySavings}%</p>
+            </div>
+            <div className="p-2 bg-orange-100 dark:bg-orange-900 rounded-lg">
+              <ArrowUpRight className="h-5 w-5 text-orange-600 dark:text-orange-400" />
             </div>
           </div>
         </div>
@@ -171,6 +198,10 @@ const DashboardPage: React.FC = () => {
           {...({} as any)}
         >
           <div className="relative">
+            {/* Coming Soon Banner */}
+            <div className="absolute -top-2 -right-2 bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md z-20">
+              COMING SOON
+            </div>
             {/* Expand/Collapse Button */}
             <button
               onClick={() => setIsChatExpanded(!isChatExpanded)}
@@ -208,7 +239,7 @@ const DashboardPage: React.FC = () => {
             {...({} as any)}
           >
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Top Cards</h2>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Most Popular Cards</h2>
               <button className="text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300 text-sm font-medium">
                 View all
               </button>
@@ -222,12 +253,12 @@ const DashboardPage: React.FC = () => {
                     </div>
                     <div>
                       <p className="font-medium text-gray-900 dark:text-white text-sm">{card.name}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{formatRupees(card.rewards)} rewards</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{card.holders.toLocaleString()} holders</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-1">
-                    <ArrowUpRight className="h-3 w-3 text-green-500" />
-                    <span className="text-xs font-medium text-green-600 dark:text-green-400">
+                    <Users className="h-3 w-3 text-blue-500" />
+                    <span className="text-xs font-medium text-blue-600 dark:text-blue-400">
                       {card.percentage}%
                     </span>
                   </div>
@@ -236,7 +267,7 @@ const DashboardPage: React.FC = () => {
             </div>
           </motion.div>
 
-          {/* Recent Transactions */}
+          {/* Top Discussions */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -245,29 +276,70 @@ const DashboardPage: React.FC = () => {
             {...({} as any)}
           >
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Recent Transactions</h2>
-              <button className="text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300 text-sm font-medium">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Top Discussions</h2>
+              <button 
+                onClick={() => navigate('/all-cards')}
+                className="text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300 text-sm font-medium"
+              >
                 View all
               </button>
             </div>
             <div className="space-y-3 max-h-80 overflow-y-auto">
-              {recentTransactions.map((transaction) => (
-                <div key={transaction.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-primary-100 dark:bg-primary-900 rounded-lg flex items-center justify-center">
-                      <Activity className="h-4 w-4 text-primary-600 dark:text-primary-400" />
+              {topDiscussions.length > 0 ? (
+                topDiscussions.map((discussion, index) => (
+                  <div 
+                    key={discussion.id} 
+                    onClick={() => navigate(`/community/post/${discussion.id}`)}
+                    className="flex items-start justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                  >
+                    <div className="flex items-start space-x-3 flex-1">
+                      <div className="w-6 h-6 bg-gradient-to-r from-primary-500 to-primary-600 rounded-md flex items-center justify-center text-white text-xs font-bold mt-1">
+                        {index + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-900 dark:text-white text-sm line-clamp-2 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
+                          {discussion.title}
+                        </p>
+                        <div className="flex items-center space-x-4 mt-1">
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            {discussion.user_name}
+                          </span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            {discussion.time_ago}
+                          </span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            {discussion.card_name}
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium text-gray-900 dark:text-white text-sm">{transaction.merchant}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{transaction.category}</p>
+                    <div className="flex items-center space-x-2 ml-3">
+                      <div className="flex items-center space-x-1">
+                        <ThumbsUp className="h-3 w-3 text-green-500" />
+                        <span className="text-xs font-medium text-green-600 dark:text-green-400">
+                          {discussion.upvotes}
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <MessageSquare className="h-3 w-3 text-blue-500" />
+                        <span className="text-xs font-medium text-blue-600 dark:text-blue-400">
+                          {discussion.comment_count}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-medium text-gray-900 dark:text-white text-sm">{formatRupees(transaction.amount)}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{transaction.date}</p>
-                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8">
+                  <MessageSquare className="w-8 h-8 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    No discussions yet
+                  </p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">
+                    Be the first to start a discussion!
+                  </p>
                 </div>
-              ))}
+              )}
             </div>
           </motion.div>
         </div>

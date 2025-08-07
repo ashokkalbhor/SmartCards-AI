@@ -28,6 +28,9 @@ import ProfilePage from './pages/Profile/ProfilePage';
 import SettingsPage from './pages/Settings/SettingsPage';
 import CommunityPage from './pages/Community/CommunityPage';
 import PostDetailPage from './pages/Community/PostDetailPage';
+import AdminDashboardPage from './pages/Admin/AdminDashboardPage';
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
+import TermsOfServicePage from './pages/TermsOfServicePage';
 
 // Hooks
 import { useAuth } from './hooks/useAuth';
@@ -71,6 +74,8 @@ function AppContent() {
           {/* Public Routes */}
           <Route path="/" element={<HomePage />} />
           <Route path="/about" element={<AboutPage />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+          <Route path="/terms-of-service" element={<TermsOfServicePage />} />
           <Route path="/login" element={
             isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />
           } />
@@ -196,6 +201,15 @@ function AppContent() {
             <ProtectedRoute>
               <Layout>
                 <PostDetailPage />
+              </Layout>
+            </ProtectedRoute>
+          } />
+
+          {/* Admin Routes */}
+          <Route path="/admin" element={
+            <ProtectedRoute>
+              <Layout>
+                <AdminDashboardPage />
               </Layout>
             </ProtectedRoute>
           } />

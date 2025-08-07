@@ -1,9 +1,11 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import func, desc
 
 from app.core.database import get_db
 from app.models.credit_card import CreditCard
+from app.models.card_master_data import CardMasterData
 from app.schemas.credit_card import (
     CreditCardCreate,
     CreditCardUpdate,
@@ -52,6 +54,50 @@ def get_credit_cards(
     
     cards = query.offset(skip).limit(limit).all()
     return cards
+
+
+@router.get("/popular-cards")
+def get_popular_cards(
+    limit: int = Query(5, ge=1, le=20),
+    db: Session = Depends(get_db)
+):
+    """Get the most popular cards based on number of users holding them"""
+    # Query to get card master data with holder counts
+    popular_cards = db.query(
+        CardMasterData.id,
+        CardMasterData.bank_name,
+        CardMasterData.card_name,
+        func.count(CreditCard.id).label('holder_count')
+    ).outerjoin(
+        CreditCard, 
+        CardMasterData.id == CreditCard.card_master_data_id
+    ).filter(
+        CreditCard.is_active == True
+    ).group_by(
+        CardMasterData.id,
+        CardMasterData.bank_name,
+        CardMasterData.card_name
+    ).order_by(
+        desc(func.count(CreditCard.id))
+    ).limit(limit).all()
+    
+    # Calculate total holders for percentage calculation
+    total_holders = db.query(func.count(CreditCard.id)).filter(
+        CreditCard.is_active == True
+    ).scalar() or 1
+    
+    # Format the response
+    result = []
+    for card in popular_cards:
+        percentage = round((card.holder_count / total_holders) * 100, 1)
+        result.append({
+            "id": card.id,
+            "name": f"{card.bank_name} {card.card_name}",
+            "holders": card.holder_count,
+            "percentage": percentage
+        })
+    
+    return result
 
 
 @router.get("/{card_id}", response_model=CreditCardResponse)

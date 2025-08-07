@@ -460,6 +460,7 @@ def vote_on_post(
         created_at=existing_vote.created_at if existing_vote else vote.created_at
     )
 
+
 @router.post("/comments/{comment_id}/vote", response_model=VoteResponse)
 def vote_on_comment(
     comment_id: int,
@@ -521,4 +522,114 @@ def vote_on_comment(
         user_id=current_user.id,
         vote_type=vote_data.vote_type,
         created_at=existing_vote.created_at if existing_vote else vote.created_at
-    ) 
+    )
+
+
+@router.get("/top-discussions")
+def get_top_discussions(
+    limit: int = Query(5, ge=1, le=10),
+    db: Session = Depends(get_db)
+):
+    """Get top discussions using multi-tier fallback strategy"""
+    
+    def calculate_engagement_score(post: CommunityPost) -> float:
+        """Calculate engagement score for a post"""
+        # Get comment count including replies
+        comment_count = db.query(CommunityComment).filter(
+            CommunityComment.post_id == post.id,
+            CommunityComment.is_deleted == False
+        ).count()
+        
+        # Get reply count (comments with parent_id)
+        reply_count = db.query(CommunityComment).filter(
+            CommunityComment.post_id == post.id,
+            CommunityComment.parent_id.isnot(None),
+            CommunityComment.is_deleted == False
+        ).count()
+        
+        # Calculate engagement score
+        engagement_score = (
+            (post.upvotes * 2) + 
+            (post.downvotes * -1) + 
+            (comment_count * 3) + 
+            (reply_count * 1.5)
+        )
+        
+        # Add recency bonus (max 12 points for posts < 24 hours old)
+        hours_since_posted = (datetime.utcnow() - post.created_at).total_seconds() / 3600
+        recency_bonus = max(0, (24 - hours_since_posted) * 0.5)
+        
+        return engagement_score + recency_bonus
+    
+    def get_discussions_by_tier(days_back: Optional[int] = None, min_engagement: float = 0) -> List[dict]:
+        """Get discussions for a specific tier"""
+        query = db.query(CommunityPost).filter(
+            CommunityPost.is_deleted == False
+        )
+        
+        if days_back:
+            cutoff_date = datetime.utcnow() - timedelta(days=days_back)
+            query = query.filter(CommunityPost.created_at >= cutoff_date)
+        
+        posts = query.all()
+        
+        # Calculate scores and filter by minimum engagement
+        scored_posts = []
+        for post in posts:
+            score = calculate_engagement_score(post)
+            if score >= min_engagement:
+                scored_posts.append({
+                    'post': post,
+                    'score': score,
+                    'engagement_score': calculate_engagement_score(post)
+                })
+        
+        # Sort by score and return top results
+        scored_posts.sort(key=lambda x: x['score'], reverse=True)
+        return scored_posts[:limit]
+    
+    # Multi-tier fallback strategy
+    tiers = [
+        (7, 10),    # Tier 1: Last 7 days, engagement > 10
+        (30, 5),    # Tier 2: Last 30 days, engagement > 5
+        (None, 0),  # Tier 3: All-time, any engagement
+        (7, 0),     # Tier 4: Last 7 days, any engagement
+        (None, 0)   # Tier 5: All-time, any engagement (fallback)
+    ]
+    
+    for days_back, min_engagement in tiers:
+        discussions = get_discussions_by_tier(days_back, min_engagement)
+        if discussions:
+            # Format response
+            result = []
+            for item in discussions:
+                post = item['post']
+                card = db.query(CardMasterData).filter(CardMasterData.id == post.card_master_id).first()
+                
+                result.append({
+                    "id": post.id,
+                    "title": post.title,
+                    "body": post.body,
+                    "user_name": post.user.full_name,
+                    "card_name": f"{card.bank_name} {card.card_name}" if card else "Unknown Card",
+                    "upvotes": post.upvotes,
+                    "downvotes": post.downvotes,
+                    "comment_count": post.comment_count,
+                    "engagement_score": round(item['engagement_score'], 1),
+                    "created_at": post.created_at,
+                    "time_ago": format_time_ago(post.created_at)
+                })
+            
+            return {
+                "discussions": result,
+                "tier": f"Last {days_back} days" if days_back else "All-time",
+                "count": len(result)
+            }
+    
+    # If no discussions found, return placeholder
+    return {
+        "discussions": [],
+        "tier": "No discussions",
+        "count": 0,
+        "message": "No discussions yet. Be the first to start a discussion!"
+    } 

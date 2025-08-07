@@ -146,11 +146,28 @@ dmypy.json
 *.db
 *.sqlite
 *.sqlite3
+*.sql
 smartcards_ai.db
 backend/smartcards_ai.db
+backend/*.db
+backend/*.sqlite
+backend/*.sqlite3
 
 # ChromaDB
 chroma_db/
+backend/chroma_db/
+**/chroma_db/
+
+# Vector database files
+*.faiss
+*.index
+*.pkl
+*.pickle
+
+# Database backups and dumps
+*.dump
+*.backup
+*.bak
 
 # IDEs
 .vscode/

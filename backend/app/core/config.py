@@ -55,6 +55,9 @@ class Settings(BaseSettings):
     # Rate Limiting
     RATE_LIMIT_PER_MINUTE: int = 60
     
+    # Admin Configuration
+    ADMIN_EMAILS: List[str] = ["ashokkalbhor@gmail.com"]
+    
     # Logging
     LOG_LEVEL: str = "INFO"
     LOG_FORMAT: str = "json"

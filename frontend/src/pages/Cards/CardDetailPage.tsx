@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { cardMasterDataAPI, cardReviewsAPI } from '../../services/api';
+import { cardMasterDataAPI, cardReviewsAPI, cardDocumentsAPI, communityAPI } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
 import ReviewForm from '../../components/UI/ReviewForm';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
-import { ArrowLeft, CreditCard, Star, MessageSquare, ThumbsUp, ThumbsDown, User, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, CreditCard, Star, MessageSquare, ThumbsUp, ThumbsDown, User, CheckCircle, ChevronDown, ChevronUp, Edit3, FileText, Upload, ExternalLink, Plus } from 'lucide-react';
+import EditSuggestionModal from '../../components/UI/EditSuggestionModal';
+import DocumentSubmissionModal from '../../components/UI/DocumentSubmissionModal';
+import CreatePostModal from '../../components/UI/CreatePostModal';
 
 interface CardData {
   id: number;
@@ -64,6 +67,19 @@ interface ReviewsResponse {
   average_rating: number;
 }
 
+interface CommunityPost {
+  id: number;
+  title: string;
+  body?: string;
+  user_name: string;
+  upvotes: number;
+  downvotes: number;
+  net_votes: number;
+  comment_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
 const CardDetailPage: React.FC = () => {
   const { cardId } = useParams<{ cardId: string }>();
   const navigate = useNavigate();
@@ -76,6 +92,24 @@ const CardDetailPage: React.FC = () => {
   const [userReview, setUserReview] = useState<ReviewData | null>(null);
   const [showAllMerchants, setShowAllMerchants] = useState(false);
   const [showAllCategories, setShowAllCategories] = useState(false);
+  
+  // Edit suggestion modal state
+  const [showEditSuggestionModal, setShowEditSuggestionModal] = useState(false);
+  const [editSuggestionData, setEditSuggestionData] = useState<{
+    fieldType: 'spending_category' | 'merchant_reward';
+    fieldName: string;
+    currentValue: string;
+  } | null>(null);
+
+  // Document submission modal state
+  const [showDocumentModal, setShowDocumentModal] = useState(false);
+  const [approvedDocuments, setApprovedDocuments] = useState<any[]>([]);
+  const [documentsLoading, setDocumentsLoading] = useState(false);
+
+  // Community posts state
+  const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>([]);
+  const [postsLoading, setPostsLoading] = useState(false);
+  const [showCreatePost, setShowCreatePost] = useState(false);
 
   const loadCardData = useCallback(async () => {
     try {
@@ -110,12 +144,38 @@ const CardDetailPage: React.FC = () => {
     }
   }, [cardId, user]);
 
+  const loadApprovedDocuments = useCallback(async () => {
+    try {
+      setDocumentsLoading(true);
+      const documents = await cardDocumentsAPI.getApprovedDocuments(parseInt(cardId!));
+      setApprovedDocuments(documents);
+    } catch (error) {
+      console.error('Error loading approved documents:', error);
+    } finally {
+      setDocumentsLoading(false);
+    }
+  }, [cardId]);
+
+  const loadCommunityPosts = useCallback(async () => {
+    try {
+      setPostsLoading(true);
+      const response = await communityAPI.getCardPosts(cardId!);
+      setCommunityPosts(response.posts || []);
+    } catch (error) {
+      console.error('Error loading community posts:', error);
+    } finally {
+      setPostsLoading(false);
+    }
+  }, [cardId]);
+
   useEffect(() => {
     if (cardId) {
       loadCardData();
       loadReviews();
+      loadApprovedDocuments();
+      loadCommunityPosts(); // Load community posts here
     }
-  }, [cardId, loadCardData, loadReviews]);
+  }, [cardId, loadCardData, loadReviews, loadApprovedDocuments, loadCommunityPosts]);
 
   const handleReviewSubmit = async (reviewData: any) => {
     try {
@@ -157,6 +217,37 @@ const CardDetailPage: React.FC = () => {
       await loadReviews(); // Reload to get updated vote counts
     } catch (error) {
       console.error('Error voting on review:', error);
+    }
+  };
+
+  const handleEditSuggestion = (fieldType: 'spending_category' | 'merchant_reward', fieldName: string, currentValue: string) => {
+    setEditSuggestionData({
+      fieldType,
+      fieldName,
+      currentValue
+    });
+    setShowEditSuggestionModal(true);
+  };
+
+  const handleEditSuggestionSuccess = () => {
+    // Reload card data to reflect any approved changes
+    loadCardData();
+    setShowEditSuggestionModal(false);
+    setEditSuggestionData(null);
+  };
+
+  const handleDocumentSubmissionSuccess = () => {
+    // Reload approved documents
+    loadApprovedDocuments();
+  };
+
+  const handleCreatePost = async (postData: { title: string; body?: string }) => {
+    try {
+      await communityAPI.createPost(cardId!, postData);
+      setShowCreatePost(false);
+      loadCommunityPosts(); // Reload posts
+    } catch (error) {
+      console.error('Error creating post:', error);
     }
   };
 
@@ -283,26 +374,35 @@ const CardDetailPage: React.FC = () => {
                   <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Spending Categories</h3>
                   {cardData.spending_categories && cardData.spending_categories.length > 0 ? (
                     <div className="space-y-3">
-                      <div className={`space-y-3 ${showAllCategories ? 'h-64 overflow-y-auto' : 'h-48 overflow-hidden'}`}>
-                        {cardData.spending_categories.slice(0, showAllCategories ? undefined : 4).map((category) => (
-                          <div key={category.id} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-600 rounded-lg">
+                      <div className={`space-y-3 ${showAllCategories ? 'h-64 overflow-y-auto' : 'h-52 overflow-hidden'}`}>
+                        {cardData.spending_categories.slice(0, showAllCategories ? undefined : 3).map((category) => (
+                          <div key={category.id} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-600 rounded-lg group">
                             <span className="text-sm font-medium text-gray-900 dark:text-white capitalize">
                               {category.category_display_name.replace(/_/g, ' ')}
                             </span>
-                            <span className="text-sm text-green-600 dark:text-green-400 font-semibold">
-                              {category.reward_display}
-                            </span>
+                            <div className="flex items-center space-x-2">
+                              <span className="text-sm text-green-600 dark:text-green-400 font-semibold">
+                                {category.reward_display}
+                              </span>
+                              <button
+                                onClick={() => handleEditSuggestion('spending_category', category.category_name, category.reward_rate.toString())}
+                                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-gray-400 hover:text-primary-600 dark:hover:text-primary-400"
+                                title="Suggest edit"
+                              >
+                                <Edit3 className="w-3 h-3" />
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </div>
                       
-                      {cardData.spending_categories.length > 4 && (
+                      {cardData.spending_categories.length > 3 && (
                         <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
                           <button
                             onClick={() => setShowAllCategories(!showAllCategories)}
                             className="w-full flex items-center justify-center space-x-2 text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium transition-colors"
                           >
-                            <span>{showAllCategories ? 'See Less' : `See More (${cardData.spending_categories.length - 4} more)`}</span>
+                            <span>{showAllCategories ? 'See Less' : `See More (${cardData.spending_categories.length - 3} more)`}</span>
                             {showAllCategories ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                           </button>
                         </div>
@@ -318,26 +418,35 @@ const CardDetailPage: React.FC = () => {
                   <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Merchant Rewards</h3>
                   {cardData.merchant_rewards && cardData.merchant_rewards.length > 0 ? (
                     <div className="space-y-3">
-                      <div className={`space-y-3 ${showAllMerchants ? 'h-64 overflow-y-auto' : 'h-48 overflow-hidden'}`}>
-                        {cardData.merchant_rewards.slice(0, showAllMerchants ? undefined : 4).map((merchant) => (
-                          <div key={merchant.id} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-600 rounded-lg">
+                      <div className={`space-y-3 ${showAllMerchants ? 'h-64 overflow-y-auto' : 'h-52 overflow-hidden'}`}>
+                        {cardData.merchant_rewards.slice(0, showAllMerchants ? undefined : 3).map((merchant) => (
+                          <div key={merchant.id} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-600 rounded-lg group">
                             <span className="text-sm font-medium text-gray-900 dark:text-white capitalize">
                               {merchant.merchant_display_name.replace(/_/g, ' ')}
                             </span>
-                            <span className="text-sm text-blue-600 dark:text-blue-400 font-semibold">
-                              {merchant.reward_display}
-                            </span>
+                            <div className="flex items-center space-x-2">
+                              <span className="text-sm text-blue-600 dark:text-blue-400 font-semibold">
+                                {merchant.reward_display}
+                              </span>
+                              <button
+                                onClick={() => handleEditSuggestion('merchant_reward', merchant.merchant_name, merchant.reward_rate.toString())}
+                                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-gray-400 hover:text-primary-600 dark:hover:text-primary-400"
+                                title="Suggest edit"
+                              >
+                                <Edit3 className="w-3 h-3" />
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </div>
                       
-                      {cardData.merchant_rewards.length > 4 && (
+                      {cardData.merchant_rewards.length > 3 && (
                         <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
                           <button
                             onClick={() => setShowAllMerchants(!showAllMerchants)}
                             className="w-full flex items-center justify-center space-x-2 text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium transition-colors"
                           >
-                            <span>{showAllMerchants ? 'See Less' : `See More (${cardData.merchant_rewards.length - 4} more)`}</span>
+                            <span>{showAllMerchants ? 'See Less' : `See More (${cardData.merchant_rewards.length - 3} more)`}</span>
                             {showAllMerchants ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                           </button>
                         </div>
@@ -468,7 +577,111 @@ const CardDetailPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Section 3: Community Discussion */}
+          {/* Section 3: Official Documents */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center">
+                  <FileText className="w-5 h-5 mr-2" />
+                  Official Documents
+                </h2>
+                <button
+                  onClick={() => setShowDocumentModal(true)}
+                  className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm flex items-center"
+                >
+                  <Upload className="w-4 h-4 mr-1" />
+                  Submit Document
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6">
+              {documentsLoading ? (
+                <div className="text-center py-8">
+                  <LoadingSpinner />
+                  <p className="text-gray-500 dark:text-gray-400 mt-2">Loading documents...</p>
+                </div>
+              ) : approvedDocuments.length > 0 ? (
+                <div className="space-y-4">
+                  {approvedDocuments.map((document) => (
+                    <div key={document.id} className="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-2">
+                            {document.document_type === 'link' && <ExternalLink className="w-4 h-4 text-blue-500" />}
+                            {document.document_type === 'file' && <FileText className="w-4 h-4 text-green-500" />}
+                            {document.document_type === 'policy_update' && <FileText className="w-4 h-4 text-orange-500" />}
+                            {document.document_type === 'terms_change' && <FileText className="w-4 h-4 text-purple-500" />}
+                            <h3 className="font-semibold text-gray-900 dark:text-white">{document.title}</h3>
+                            <span className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded">
+                              {document.document_type.replace('_', ' ')}
+                            </span>
+                          </div>
+                          
+                          {document.description && (
+                            <p className="text-gray-600 dark:text-gray-300 text-sm mb-2">{document.description}</p>
+                          )}
+                          
+                          {document.document_type === 'link' && (
+                            <a
+                              href={document.content}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 dark:text-blue-400 hover:underline text-sm flex items-center"
+                            >
+                              <ExternalLink className="w-3 h-3 mr-1" />
+                              View Document
+                            </a>
+                          )}
+                          
+                          {(document.document_type === 'policy_update' || document.document_type === 'terms_change') && (
+                            <div className="bg-gray-50 dark:bg-gray-700 rounded p-3 mt-2">
+                              <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{document.content}</p>
+                            </div>
+                          )}
+                          
+                          <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-200 dark:border-gray-600">
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                              Submitted by {document.user_name} • {new Date(document.created_at).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <FileText className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+                  <p className="text-gray-600 dark:text-gray-300 mb-4">
+                    No official documents available yet. Help the community by submitting official documents, policy updates, or links.
+                  </p>
+                  <div className="flex items-center justify-center space-x-4 text-sm text-gray-500 dark:text-gray-400 mb-4">
+                    <div className="flex items-center">
+                      <ExternalLink className="w-4 h-4 mr-1" />
+                      <span>Links</span>
+                    </div>
+                    <div className="flex items-center">
+                      <FileText className="w-4 h-4 mr-1" />
+                      <span>Files</span>
+                    </div>
+                    <div className="flex items-center">
+                      <FileText className="w-4 h-4 mr-1" />
+                      <span>Policy Updates</span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowDocumentModal(true)}
+                    className="px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
+                  >
+                    Submit Document
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Section 4: Community Discussion */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
@@ -476,48 +689,143 @@ const CardDetailPage: React.FC = () => {
                   <MessageSquare className="w-5 h-5 mr-2" />
                   Community Discussion
                 </h2>
-                <button
-                  onClick={() => navigate(`/community/${cardId}`)}
-                  className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm"
-                >
-                  Join Discussion
-                </button>
+                {communityPosts.length > 0 && (
+                  <button
+                    onClick={() => setShowCreatePost(true)}
+                    className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm flex items-center"
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    New Post
+                  </button>
+                )}
               </div>
             </div>
             
             <div className="p-6">
-              <div className="text-center py-8">
-                <MessageSquare className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-                <p className="text-gray-600 dark:text-gray-300 mb-4">
-                  Join the community discussion! Share your experiences, ask questions, and connect with other card users.
-                </p>
-                <div className="flex items-center justify-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
-                  <div className="flex items-center">
-                    <ThumbsUp className="w-4 h-4 mr-1" />
-                    <span>Upvote</span>
-                  </div>
-                  <div className="flex items-center">
-                    <ThumbsDown className="w-4 h-4 mr-1" />
-                    <span>Downvote</span>
-                  </div>
-                  <div className="flex items-center">
-                    <MessageSquare className="w-4 h-4 mr-1" />
-                    <span>Reply</span>
-                  </div>
+              {postsLoading ? (
+                <div className="text-center py-8">
+                  <LoadingSpinner />
+                  <p className="text-gray-500 dark:text-gray-400 mt-2">Loading discussions...</p>
                 </div>
-                <div className="mt-6">
+              ) : communityPosts.length > 0 ? (
+                <div className="space-y-4">
+                  {communityPosts.map((post) => (
+                    <div key={post.id} className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                      <div className="flex items-start space-x-3">
+                        {/* Vote buttons */}
+                        <div className="flex flex-col items-center space-y-1">
+                          <button className="text-gray-400 hover:text-green-600 dark:hover:text-green-400">
+                            <ThumbsUp className="w-4 h-4" />
+                          </button>
+                          <span className="text-sm font-medium text-gray-900 dark:text-white">
+                            {post.net_votes}
+                          </span>
+                          <button className="text-gray-400 hover:text-red-600 dark:hover:text-red-400">
+                            <ThumbsDown className="w-4 h-4" />
+                          </button>
+                        </div>
+                        
+                        {/* Post content */}
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <h3 className="font-semibold text-gray-900 dark:text-white text-lg">
+                              {post.title}
+                            </h3>
+                            <span className="px-2 py-1 text-xs bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 rounded">
+                              {post.comment_count} comments
+                            </span>
+                          </div>
+                          
+                          {post.body && (
+                            <p className="text-gray-600 dark:text-gray-300 text-sm mb-3 line-clamp-3">
+                              {post.body}
+                            </p>
+                          )}
+                          
+                          <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                            <div className="flex items-center space-x-4">
+                              <span>Posted by {post.user_name}</span>
+                              <span>{new Date(post.created_at).toLocaleDateString()}</span>
+                            </div>
+                            <button className="text-primary-600 dark:text-primary-400 hover:underline">
+                              View Discussion
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <MessageSquare className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+                  <p className="text-gray-600 dark:text-gray-300 mb-4">
+                    No discussions yet. Start the conversation by sharing your experiences, asking questions, or connecting with other card users.
+                  </p>
+                  <div className="flex items-center justify-center space-x-4 text-sm text-gray-500 dark:text-gray-400 mb-6">
+                    <div className="flex items-center">
+                      <ThumbsUp className="w-4 h-4 mr-1" />
+                      <span>Upvote</span>
+                    </div>
+                    <div className="flex items-center">
+                      <ThumbsDown className="w-4 h-4 mr-1" />
+                      <span>Downvote</span>
+                    </div>
+                    <div className="flex items-center">
+                      <MessageSquare className="w-4 h-4 mr-1" />
+                      <span>Reply</span>
+                    </div>
+                  </div>
                   <button
-                    onClick={() => navigate(`/community/${cardId}`)}
-                    className="px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
+                    onClick={() => setShowCreatePost(true)}
+                    className="px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors flex items-center mx-auto"
                   >
+                    <Plus className="w-4 h-4 mr-2" />
                     Start Discussion
                   </button>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
       </div>
+
+      {/* Edit Suggestion Modal */}
+      {editSuggestionData && (
+        <EditSuggestionModal
+          isOpen={showEditSuggestionModal}
+          onClose={() => {
+            setShowEditSuggestionModal(false);
+            setEditSuggestionData(null);
+          }}
+          cardId={parseInt(cardId!)}
+          cardName={cardData.display_name}
+          fieldType={editSuggestionData.fieldType}
+          fieldName={editSuggestionData.fieldName}
+          currentValue={editSuggestionData.currentValue}
+          onSuccess={handleEditSuggestionSuccess}
+        />
+      )}
+
+      {/* Document Submission Modal */}
+      {showDocumentModal && (
+        <DocumentSubmissionModal
+          isOpen={showDocumentModal}
+          onClose={() => setShowDocumentModal(false)}
+          cardId={parseInt(cardId!)}
+          cardName={cardData?.display_name || 'Unknown Card'}
+          onSuccess={handleDocumentSubmissionSuccess}
+        />
+      )}
+
+      {/* Create Post Modal */}
+      {showCreatePost && (
+        <CreatePostModal
+          isOpen={showCreatePost}
+          onClose={() => setShowCreatePost(false)}
+          onSubmit={handleCreatePost}
+        />
+      )}
     </div>
   );
 };
