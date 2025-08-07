@@ -142,16 +142,16 @@ venv.bak/
 .dmypy.json
 dmypy.json
 
-# Database files
-*.db
-*.sqlite
-*.sqlite3
-*.sql
-smartcards_ai.db
-backend/smartcards_ai.db
-backend/*.db
-backend/*.sqlite
-backend/*.sqlite3
+# Database files (excluding specific ones for deployment)
+# *.db
+# *.sqlite
+# *.sqlite3
+# *.sql
+# smartcards_ai.db
+# backend/smartcards_ai.db
+# backend/*.db
+# backend/*.sqlite
+# backend/*.sqlite3
 
 # ChromaDB
 chroma_db/
