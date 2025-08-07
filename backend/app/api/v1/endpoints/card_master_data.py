@@ -71,15 +71,122 @@ def get_card_master_data(
 @router.get("/cards/{card_id}", response_model=CardMasterDataResponse)
 def get_card_master_data_by_id(card_id: int, db: Session = Depends(get_db)):
     """Get specific card master data by ID"""
-    card = db.query(CardMasterData).options(
-        joinedload(CardMasterData.spending_categories),
-        joinedload(CardMasterData.merchant_rewards)
-    ).filter(CardMasterData.id == card_id).first()
-    
-    if not card:
-        raise HTTPException(status_code=404, detail="Card not found")
-    
-    return card
+    try:
+        # First try to get the card without joinedload to see if the card exists
+        card = db.query(CardMasterData).filter(CardMasterData.id == card_id).first()
+        
+        if not card:
+            raise HTTPException(status_code=404, detail="Card not found")
+        
+        # Now try to get with joinedload
+        card_with_relations = db.query(CardMasterData).options(
+            joinedload(CardMasterData.spending_categories),
+            joinedload(CardMasterData.merchant_rewards)
+        ).filter(CardMasterData.id == card_id).first()
+        
+        # Convert to dict and back to handle None values properly
+        card_dict = {
+            "id": card_with_relations.id,
+            "bank_name": card_with_relations.bank_name,
+            "card_name": card_with_relations.card_name,
+            "card_variant": card_with_relations.card_variant,
+            "card_network": card_with_relations.card_network,
+            "card_tier": card_with_relations.card_tier.lower() if card_with_relations.card_tier else "basic",
+            "joining_fee": card_with_relations.joining_fee,
+            "annual_fee": card_with_relations.annual_fee,
+            "is_lifetime_free": card_with_relations.is_lifetime_free,
+            "annual_fee_waiver_spend": card_with_relations.annual_fee_waiver_spend,
+            "foreign_transaction_fee": card_with_relations.foreign_transaction_fee,
+            "late_payment_fee": card_with_relations.late_payment_fee,
+            "overlimit_fee": card_with_relations.overlimit_fee,
+            "cash_advance_fee": card_with_relations.cash_advance_fee,
+            "domestic_lounge_visits": card_with_relations.domestic_lounge_visits,
+            "international_lounge_visits": card_with_relations.international_lounge_visits,
+            "lounge_spend_requirement": card_with_relations.lounge_spend_requirement,
+            "lounge_spend_period": card_with_relations.lounge_spend_period,
+            "welcome_bonus_points": card_with_relations.welcome_bonus_points,
+            "welcome_bonus_spend_requirement": card_with_relations.welcome_bonus_spend_requirement,
+            "welcome_bonus_timeframe": card_with_relations.welcome_bonus_timeframe,
+            "minimum_credit_limit": card_with_relations.minimum_credit_limit,
+            "maximum_credit_limit": card_with_relations.maximum_credit_limit,
+            "minimum_salary": card_with_relations.minimum_salary,
+            "minimum_age": card_with_relations.minimum_age,
+            "maximum_age": card_with_relations.maximum_age,
+            "contactless_enabled": card_with_relations.contactless_enabled,
+            "chip_enabled": card_with_relations.chip_enabled,
+            "mobile_wallet_support": card_with_relations.mobile_wallet_support,
+            "insurance_benefits": card_with_relations.insurance_benefits,
+            "concierge_service": card_with_relations.concierge_service if card_with_relations.concierge_service is not None else False,
+            "milestone_benefits": card_with_relations.milestone_benefits,
+            "reward_program_name": card_with_relations.reward_program_name,
+            "reward_expiry_period": card_with_relations.reward_expiry_period,
+            "reward_conversion_rate": card_with_relations.reward_conversion_rate,
+            "minimum_redemption_points": card_with_relations.minimum_redemption_points,
+            "is_active": card_with_relations.is_active,
+            "is_available_online": card_with_relations.is_available_online,
+            "launch_date": card_with_relations.launch_date,
+            "discontinue_date": card_with_relations.discontinue_date,
+            "description": card_with_relations.description,
+            "terms_and_conditions_url": card_with_relations.terms_and_conditions_url,
+            "application_url": card_with_relations.application_url,
+            "additional_features": card_with_relations.additional_features,
+            "created_at": card_with_relations.created_at,
+            "updated_at": card_with_relations.updated_at,
+            "display_name": card_with_relations.display_name,
+            "joining_fee_display": card_with_relations.joining_fee_display,
+            "annual_fee_display": card_with_relations.annual_fee_display,
+            "spending_categories": [
+                {
+                    "id": cat.id,
+                    "card_master_id": cat.card_master_id,
+                    "category_name": cat.category_name,
+                    "category_display_name": cat.category_display_name,
+                    "reward_rate": cat.reward_rate,
+                    "reward_type": cat.reward_type,
+                    "reward_cap": cat.reward_cap,
+                    "reward_cap_period": cat.reward_cap_period,
+                    "minimum_transaction_amount": cat.minimum_transaction_amount,
+                    "is_active": cat.is_active,
+                    "valid_from": cat.valid_from,
+                    "valid_until": cat.valid_until,
+                    "additional_conditions": cat.additional_conditions,
+                    "created_at": cat.created_at,
+                    "updated_at": cat.updated_at,
+                    "reward_display": cat.reward_display
+                } for cat in card_with_relations.spending_categories
+            ],
+            "merchant_rewards": [
+                {
+                    "id": reward.id,
+                    "card_master_id": reward.card_master_id,
+                    "merchant_name": reward.merchant_name,
+                    "merchant_display_name": reward.merchant_display_name,
+                    "merchant_category": reward.merchant_category,
+                    "reward_rate": reward.reward_rate,
+                    "reward_type": reward.reward_type,
+                    "reward_cap": reward.reward_cap,
+                    "reward_cap_period": reward.reward_cap_period,
+                    "minimum_transaction_amount": reward.minimum_transaction_amount,
+                    "is_active": reward.is_active,
+                    "valid_from": reward.valid_from,
+                    "valid_until": reward.valid_until,
+                    "requires_registration": reward.requires_registration if reward.requires_registration is not None else False,
+                    "additional_conditions": reward.additional_conditions,
+                    "created_at": reward.created_at,
+                    "updated_at": reward.updated_at,
+                    "reward_display": reward.reward_display
+                } for reward in card_with_relations.merchant_rewards
+            ]
+        }
+        
+        # Create response using the schema
+        return CardMasterDataResponse(**card_dict)
+        
+    except Exception as e:
+        print(f"Error getting card {card_id}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 @router.post("/cards", response_model=CardMasterDataResponse)

@@ -5,10 +5,10 @@ from enum import Enum
 
 
 class CardTierEnum(str, Enum):
-    BASIC = "BASIC"
-    PREMIUM = "PREMIUM"
-    SUPER_PREMIUM = "SUPER_PREMIUM"
-    ELITE = "ELITE"
+    BASIC = "basic"
+    PREMIUM = "premium"
+    SUPER_PREMIUM = "super_premium"
+    ELITE = "elite"
 
 
 class RewardTypeEnum(str, Enum):
@@ -122,7 +122,7 @@ class CardSpendingCategoryBase(BaseModel):
     category_name: str = Field(..., max_length=100)
     category_display_name: str = Field(..., max_length=100)
     reward_rate: float = Field(..., ge=0, le=100)
-    reward_type: RewardTypeEnum = RewardTypeEnum.CASHBACK
+    reward_type: str = Field(default="cashback", max_length=50)  # Changed from enum to string
     reward_cap: Optional[float] = None
     reward_cap_period: Optional[str] = Field(None, max_length=20)
     minimum_transaction_amount: Optional[float] = None
@@ -140,7 +140,7 @@ class CardSpendingCategoryUpdate(BaseModel):
     category_name: Optional[str] = Field(None, max_length=100)
     category_display_name: Optional[str] = Field(None, max_length=100)
     reward_rate: Optional[float] = Field(None, ge=0, le=100)
-    reward_type: Optional[RewardTypeEnum] = None
+    reward_type: Optional[str] = Field(None, max_length=50)
     reward_cap: Optional[float] = None
     reward_cap_period: Optional[str] = Field(None, max_length=20)
     minimum_transaction_amount: Optional[float] = None
@@ -155,7 +155,7 @@ class CardMerchantRewardBase(BaseModel):
     merchant_display_name: str = Field(..., max_length=100)
     merchant_category: Optional[str] = Field(None, max_length=100)
     reward_rate: float = Field(..., ge=0, le=100)
-    reward_type: RewardTypeEnum = RewardTypeEnum.CASHBACK
+    reward_type: str = Field(default="cashback", max_length=50)  # Changed from enum to string
     reward_cap: Optional[float] = None
     reward_cap_period: Optional[str] = Field(None, max_length=20)
     minimum_transaction_amount: Optional[float] = None
@@ -175,7 +175,7 @@ class CardMerchantRewardUpdate(BaseModel):
     merchant_display_name: Optional[str] = Field(None, max_length=100)
     merchant_category: Optional[str] = Field(None, max_length=100)
     reward_rate: Optional[float] = Field(None, ge=0, le=100)
-    reward_type: Optional[RewardTypeEnum] = None
+    reward_type: Optional[str] = Field(None, max_length=50)
     reward_cap: Optional[float] = None
     reward_cap_period: Optional[str] = Field(None, max_length=20)
     minimum_transaction_amount: Optional[float] = None
