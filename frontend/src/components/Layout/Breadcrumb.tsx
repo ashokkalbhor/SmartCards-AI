@@ -42,6 +42,7 @@ const Breadcrumb: React.FC = () => {
       const labelMappings: Record<string, string> = {
         'dashboard': 'Dashboard',
         'cards': 'My Cards',
+        'card': 'Card Details',
         'add': 'Add Card',
         'compare': 'Compare Cards',
         'edit': 'Edit Card',
@@ -52,16 +53,34 @@ const Breadcrumb: React.FC = () => {
         'settings': 'Settings',
         'login': 'Login',
         'register': 'Register',
-        'about': 'About'
+        'about': 'About',
+        'all-cards': 'All Cards',
+        'community': 'Community',
+        'post': 'Post Details',
+        'admin': 'Admin Dashboard',
+        'privacy-policy': 'Privacy Policy',
+        'terms-of-service': 'Terms Of Service'
       };
       
       if (labelMappings[segment]) {
         label = labelMappings[segment];
       }
       
-      // Handle dynamic segments (like card IDs)
+      // Handle dynamic segments (like card IDs and post IDs)
       if (segment.match(/^\d+$/)) {
-        label = 'Card Details';
+        // Check if this is a card ID or post ID based on context
+        const previousSegment = index > 0 ? pathSegments[index - 1] : '';
+        const nextSegment = index < pathSegments.length - 1 ? pathSegments[index + 1] : '';
+        
+        if (previousSegment === 'card' || previousSegment === 'cards') {
+          label = 'Card Details';
+        } else if (previousSegment === 'community' && nextSegment === 'post') {
+          label = 'Post Details';
+        } else if (previousSegment === 'post') {
+          label = 'Post Details';
+        } else {
+          label = 'Details';
+        }
       }
       
       breadcrumbs.push({
