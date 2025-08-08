@@ -241,21 +241,98 @@ def review_edit_suggestion(
         card = db.query(CardMasterData).filter(CardMasterData.id == suggestion.card_master_id).first()
         if card:
             if suggestion.field_type == "spending_category":
-                # Update spending category
+                # Find or create spending category
                 category = db.query(CardSpendingCategory).filter(
                     CardSpendingCategory.card_master_id == suggestion.card_master_id,
                     CardSpendingCategory.category_name == suggestion.field_name
                 ).first()
+                
                 if category:
+                    # Update existing category
                     category.reward_rate = float(suggestion.new_value)
+                else:
+                    # Create new category
+                    from app.core.card_templates import get_default_spending_categories
+                    default_categories = get_default_spending_categories(card.card_tier, card.bank_name)
+                    
+                    # Find the matching default category
+                    default_category = next(
+                        (cat for cat in default_categories if cat["category_name"] == suggestion.field_name),
+                        None
+                    )
+                    
+                    if default_category:
+                        new_category = CardSpendingCategory(
+                            card_master_id=suggestion.card_master_id,
+                            category_name=default_category["category_name"],
+                            category_display_name=default_category["category_display_name"],
+                            reward_rate=float(suggestion.new_value),
+                            reward_type=default_category["reward_type"],
+                            reward_cap=default_category["reward_cap"],
+                            reward_cap_period=default_category["reward_cap_period"],
+                            minimum_transaction_amount=default_category["minimum_transaction_amount"],
+                            is_active=True,
+                            additional_conditions=default_category["additional_conditions"]
+                        )
+                        db.add(new_category)
+                    else:
+                        # Fallback: create with basic info
+                        new_category = CardSpendingCategory(
+                            card_master_id=suggestion.card_master_id,
+                            category_name=suggestion.field_name,
+                            category_display_name=suggestion.field_name.replace('_', ' ').title(),
+                            reward_rate=float(suggestion.new_value),
+                            reward_type="points",
+                            is_active=True
+                        )
+                        db.add(new_category)
+                        
             elif suggestion.field_type == "merchant_reward":
-                # Update merchant reward
+                # Find or create merchant reward
                 merchant = db.query(CardMerchantReward).filter(
                     CardMerchantReward.card_master_id == suggestion.card_master_id,
                     CardMerchantReward.merchant_name == suggestion.field_name
                 ).first()
+                
                 if merchant:
+                    # Update existing merchant
                     merchant.reward_rate = float(suggestion.new_value)
+                else:
+                    # Create new merchant
+                    from app.core.card_templates import get_default_merchant_rewards
+                    default_merchants = get_default_merchant_rewards(card.card_tier, card.bank_name)
+                    
+                    # Find the matching default merchant
+                    default_merchant = next(
+                        (merch for merch in default_merchants if merch["merchant_name"] == suggestion.field_name),
+                        None
+                    )
+                    
+                    if default_merchant:
+                        new_merchant = CardMerchantReward(
+                            card_master_id=suggestion.card_master_id,
+                            merchant_name=default_merchant["merchant_name"],
+                            merchant_display_name=default_merchant["merchant_display_name"],
+                            reward_rate=float(suggestion.new_value),
+                            reward_type=default_merchant["reward_type"],
+                            reward_cap=default_merchant["reward_cap"],
+                            reward_cap_period=default_merchant["reward_cap_period"],
+                            minimum_transaction_amount=default_merchant["minimum_transaction_amount"],
+                            is_active=True,
+                            additional_conditions=default_merchant["additional_conditions"]
+                        )
+                        db.add(new_merchant)
+                    else:
+                        # Fallback: create with basic info
+                        new_merchant = CardMerchantReward(
+                            card_master_id=suggestion.card_master_id,
+                            merchant_name=suggestion.field_name,
+                            merchant_display_name=suggestion.field_name.replace('_', ' ').title(),
+                            reward_rate=float(suggestion.new_value),
+                            reward_type="points",
+                            is_active=True
+                        )
+                        db.add(new_merchant)
     
     # Create audit log
     audit_log = AuditLog(

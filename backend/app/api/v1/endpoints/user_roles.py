@@ -146,10 +146,8 @@ def submit_edit_suggestion(
         if category:
             old_value = str(category.reward_rate)
         else:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Spending category '{suggestion_data.field_name}' not found for this card"
-            )
+            # For new categories, set old_value to "Not Available" or "0"
+            old_value = "0"
     elif suggestion_data.field_type == "merchant_reward":
         merchant = db.query(CardMerchantReward).filter(
             CardMerchantReward.card_master_id == card_id,
@@ -158,10 +156,8 @@ def submit_edit_suggestion(
         if merchant:
             old_value = str(merchant.reward_rate)
         else:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Merchant reward '{suggestion_data.field_name}' not found for this card"
-            )
+            # For new merchants, set old_value to "Not Available" or "0"
+            old_value = "0"
     
     # Check if suggestion already exists
     existing_suggestion = db.query(EditSuggestion).filter(

@@ -81,10 +81,10 @@ def get_card_master_data_by_id(card_id: int, db: Session = Depends(get_db)):
         
         # Now try to get with joinedload
         card_with_relations = db.query(CardMasterData).options(
-            joinedload(CardMasterData.spending_categories),
-            joinedload(CardMasterData.merchant_rewards)
-        ).filter(CardMasterData.id == card_id).first()
-        
+        joinedload(CardMasterData.spending_categories),
+        joinedload(CardMasterData.merchant_rewards)
+    ).filter(CardMasterData.id == card_id).first()
+    
         # Always show all spending categories and merchant rewards with default values
         # Get existing data and merge with default templates
         existing_categories = {cat.category_name: cat for cat in card_with_relations.spending_categories}
