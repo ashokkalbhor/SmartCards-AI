@@ -103,12 +103,12 @@ const EditableRewardsSection: React.FC<EditableRewardsSectionProps> = ({
                   <span className="text-sm text-gray-600 dark:text-gray-400">Reward:</span>
                   <div className="flex items-center space-x-2">
                     {getRewardDisplay(item)}
-                    {isEditable && !isNotAvailable(item) && onEditSuggestion && (
+                    {isEditable && onEditSuggestion && (
                       <button
                         onClick={() => onEditSuggestion(
                           type === 'spending' ? 'spending_category' : 'merchant_reward',
                           type === 'spending' ? item.category_name! : item.merchant_name!,
-                          item.reward_rate.toString()
+                          isNotAvailable(item) ? '0' : item.reward_rate.toString()
                         )}
                         className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-gray-400 hover:text-primary-600 dark:hover:text-primary-400"
                         title="Suggest edit"
