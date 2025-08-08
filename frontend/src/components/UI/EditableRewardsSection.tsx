@@ -24,6 +24,7 @@ interface EditableRewardsSectionProps {
   type: 'spending' | 'merchant';
   onEdit?: (items: RewardItem[]) => void;
   isEditable?: boolean;
+  onEditSuggestion?: (fieldType: 'spending_category' | 'merchant_reward', fieldName: string, currentValue: string) => void;
 }
 
 const EditableRewardsSection: React.FC<EditableRewardsSectionProps> = ({
@@ -31,31 +32,10 @@ const EditableRewardsSection: React.FC<EditableRewardsSectionProps> = ({
   items,
   type,
   onEdit,
-  isEditable = true
+  isEditable = true,
+  onEditSuggestion
 }) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedItems, setEditedItems] = useState<RewardItem[]>(items);
 
-  const handleEdit = () => {
-    setIsEditing(true);
-    setEditedItems([...items]);
-  };
-
-  const handleSave = () => {
-    setIsEditing(false);
-    onEdit?.(editedItems);
-  };
-
-  const handleCancel = () => {
-    setIsEditing(false);
-    setEditedItems(items);
-  };
-
-  const handleItemChange = (index: number, field: keyof RewardItem, value: any) => {
-    const updatedItems = [...editedItems];
-    updatedItems[index] = { ...updatedItems[index], [field]: value };
-    setEditedItems(updatedItems);
-  };
 
   const isNotAvailable = (item: RewardItem) => {
     return item.reward_display === "Not Available" || !item.is_active;
@@ -85,48 +65,21 @@ const EditableRewardsSection: React.FC<EditableRewardsSectionProps> = ({
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
-      <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-            {title}
-          </h2>
-          {isEditable && !isEditing && (
-            <button
-              onClick={handleEdit}
-              className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm flex items-center"
-            >
-              <Edit3 className="w-4 h-4 mr-1" />
-              Edit
-            </button>
-          )}
-          {isEditing && (
-            <div className="flex space-x-2">
-              <button
-                onClick={handleSave}
-                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors text-sm flex items-center"
-              >
-                <Check className="w-4 h-4 mr-1" />
-                Save
-              </button>
-              <button
-                onClick={handleCancel}
-                className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors text-sm flex items-center"
-              >
-                <X className="w-4 h-4 mr-1" />
-                Cancel
-              </button>
-            </div>
-          )}
+              <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+              {title}
+            </h2>
+          </div>
         </div>
-      </div>
       
       <div className="p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {items.map((item, index) => (
-            <div
-              key={index}
-              className={`p-4 rounded-lg border ${getItemBackground(item)} transition-colors`}
-            >
+                            <div
+                  key={index}
+                  className={`p-4 rounded-lg border ${getItemBackground(item)} transition-colors group`}
+                >
               <div className="flex items-start justify-between mb-2">
                 <div className="flex-1">
                   <h3 className="font-semibold text-gray-900 dark:text-white">
@@ -148,7 +101,22 @@ const EditableRewardsSection: React.FC<EditableRewardsSectionProps> = ({
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600 dark:text-gray-400">Reward:</span>
-                  {getRewardDisplay(item)}
+                  <div className="flex items-center space-x-2">
+                    {getRewardDisplay(item)}
+                    {isEditable && !isNotAvailable(item) && onEditSuggestion && (
+                      <button
+                        onClick={() => onEditSuggestion(
+                          type === 'spending' ? 'spending_category' : 'merchant_reward',
+                          type === 'spending' ? item.category_name! : item.merchant_name!,
+                          item.reward_rate.toString()
+                        )}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-gray-400 hover:text-primary-600 dark:hover:text-primary-400"
+                        title="Suggest edit"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
                 </div>
                 
                 {!isNotAvailable(item) && item.reward_cap && (
@@ -160,54 +128,7 @@ const EditableRewardsSection: React.FC<EditableRewardsSectionProps> = ({
                   </div>
                 )}
                 
-                {isEditing && !isNotAvailable(item) && (
-                  <div className="space-y-2 pt-2 border-t border-gray-200 dark:border-gray-600">
-                    <div>
-                      <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
-                        Reward Rate (%)
-                      </label>
-                      <input
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        max="100"
-                        value={item.reward_rate}
-                        onChange={(e) => handleItemChange(index, 'reward_rate', parseFloat(e.target.value) || 0)}
-                        className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
-                        Reward Type
-                      </label>
-                      <select
-                        value={item.reward_type}
-                        onChange={(e) => handleItemChange(index, 'reward_type', e.target.value)}
-                        className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                      >
-                        <option value="points">Points</option>
-                        <option value="cashback">Cashback</option>
-                        <option value="rewards">Rewards</option>
-                      </select>
-                    </div>
-                    
-                    {item.reward_cap !== undefined && (
-                      <div>
-                        <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
-                          Reward Cap (₹)
-                        </label>
-                        <input
-                          type="number"
-                          min="0"
-                          value={item.reward_cap || ''}
-                          onChange={(e) => handleItemChange(index, 'reward_cap', parseFloat(e.target.value) || null)}
-                          className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                        />
-                      </div>
-                    )}
-                  </div>
-                )}
+
               </div>
             </div>
           ))}

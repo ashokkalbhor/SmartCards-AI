@@ -407,6 +407,7 @@ const CardDetailPage: React.FC = () => {
                   type="spending"
                   onEdit={handleSpendingCategoriesEdit}
                   isEditable={true}
+                  onEditSuggestion={handleEditSuggestion}
                 />
                 
                 <EditableRewardsSection
@@ -415,6 +416,7 @@ const CardDetailPage: React.FC = () => {
                   type="merchant"
                   onEdit={handleMerchantRewardsEdit}
                   isEditable={true}
+                  onEditSuggestion={handleEditSuggestion}
                 />
               </div>
             </div>
