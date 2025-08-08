@@ -188,10 +188,10 @@ class CardMerchantRewardUpdate(BaseModel):
 
 # Response schemas
 class CardSpendingCategoryResponse(CardSpendingCategoryBase):
-    id: int
+    id: Optional[int] = None
     card_master_id: int
     reward_display: str
-    created_at: datetime
+    created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
     class Config:
@@ -199,10 +199,10 @@ class CardSpendingCategoryResponse(CardSpendingCategoryBase):
 
 
 class CardMerchantRewardResponse(CardMerchantRewardBase):
-    id: int
+    id: Optional[int] = None
     card_master_id: int
     reward_display: str
-    created_at: datetime
+    created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
     class Config:
