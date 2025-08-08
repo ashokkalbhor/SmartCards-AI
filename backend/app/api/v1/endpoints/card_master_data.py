@@ -125,7 +125,7 @@ def get_card_master_data_by_id(card_id: int, db: Session = Depends(get_db)):
                     "additional_conditions": existing_cat.additional_conditions,
                     "created_at": existing_cat.created_at,
                     "updated_at": existing_cat.updated_at,
-                    "reward_display": existing_cat.reward_display
+                    "reward_display": f"{existing_cat.reward_rate}%"
                 })
             else:
                 # Use default with "Not Available" indicator
@@ -171,7 +171,7 @@ def get_card_master_data_by_id(card_id: int, db: Session = Depends(get_db)):
                     "additional_conditions": existing_merchant.additional_conditions,
                     "created_at": existing_merchant.created_at,
                     "updated_at": existing_merchant.updated_at,
-                    "reward_display": existing_merchant.reward_display
+                    "reward_display": f"{existing_merchant.reward_rate}%"
                 })
             else:
                 # Use default with "Not Available" indicator

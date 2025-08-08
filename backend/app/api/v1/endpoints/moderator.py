@@ -152,6 +152,24 @@ def review_suggestion(
                             is_active=True
                         )
                         db.add(new_category)
+            elif suggestion.field_type == "spending_category_cap":
+                # Update spending category cap only
+                category = db.query(CardSpendingCategory).filter(
+                    CardSpendingCategory.card_master_id == suggestion.card_master_id,
+                    CardSpendingCategory.category_name == suggestion.field_name
+                ).first()
+                
+                if category:
+                    # Only update the cap, leave reward_rate unchanged
+                    category.reward_cap = float(suggestion.new_value) if float(suggestion.new_value) > 0 else None
+                    category.reward_cap_period = "monthly"  # Default period
+                else:
+                    # If category doesn't exist, don't create it just for cap editing
+                    # This should be handled by editing the reward rate first
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Cannot edit cap for non-existent category '{suggestion.field_name}'. Please add the category first."
+                    )
                         
             elif suggestion.field_type == "merchant_reward":
                 # Find or create merchant reward
@@ -199,6 +217,24 @@ def review_suggestion(
                             is_active=True
                         )
                         db.add(new_merchant)
+            elif suggestion.field_type == "merchant_reward_cap":
+                # Update merchant reward cap only
+                merchant = db.query(CardMerchantReward).filter(
+                    CardMerchantReward.card_master_id == suggestion.card_master_id,
+                    CardMerchantReward.merchant_name == suggestion.field_name
+                ).first()
+                
+                if merchant:
+                    # Only update the cap, leave reward_rate unchanged
+                    merchant.reward_cap = float(suggestion.new_value) if float(suggestion.new_value) > 0 else None
+                    merchant.reward_cap_period = "monthly"  # Default period
+                else:
+                    # If merchant doesn't exist, don't create it just for cap editing
+                    # This should be handled by editing the reward rate first
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Cannot edit cap for non-existent merchant '{suggestion.field_name}'. Please add the merchant first."
+                    )
     
     # Create audit log
     audit_log = AuditLog(

@@ -130,10 +130,10 @@ def submit_edit_suggestion(
         raise HTTPException(status_code=404, detail="Card not found")
     
     # Validate field type
-    if suggestion_data.field_type not in ["spending_category", "merchant_reward"]:
+    if suggestion_data.field_type not in ["spending_category", "merchant_reward", "spending_category_cap", "merchant_reward_cap"]:
         raise HTTPException(
             status_code=400,
-            detail="Invalid field type. Must be 'spending_category' or 'merchant_reward'"
+            detail="Invalid field type. Must be 'spending_category', 'merchant_reward', 'spending_category_cap', or 'merchant_reward_cap'"
         )
     
     # Get current value for comparison
@@ -148,6 +148,16 @@ def submit_edit_suggestion(
         else:
             # For new categories, set old_value to "Not Available" or "0"
             old_value = "0"
+    elif suggestion_data.field_type == "spending_category_cap":
+        category = db.query(CardSpendingCategory).filter(
+            CardSpendingCategory.card_master_id == card_id,
+            CardSpendingCategory.category_name == suggestion_data.field_name
+        ).first()
+        if category:
+            old_value = str(category.reward_cap) if category.reward_cap else "0"
+        else:
+            # For new categories, set old_value to "0"
+            old_value = "0"
     elif suggestion_data.field_type == "merchant_reward":
         merchant = db.query(CardMerchantReward).filter(
             CardMerchantReward.card_master_id == card_id,
@@ -157,6 +167,16 @@ def submit_edit_suggestion(
             old_value = str(merchant.reward_rate)
         else:
             # For new merchants, set old_value to "Not Available" or "0"
+            old_value = "0"
+    elif suggestion_data.field_type == "merchant_reward_cap":
+        merchant = db.query(CardMerchantReward).filter(
+            CardMerchantReward.card_master_id == card_id,
+            CardMerchantReward.merchant_name == suggestion_data.field_name
+        ).first()
+        if merchant:
+            old_value = str(merchant.reward_cap) if merchant.reward_cap else "0"
+        else:
+            # For new merchants, set old_value to "0"
             old_value = "0"
     
     # Check if suggestion already exists
