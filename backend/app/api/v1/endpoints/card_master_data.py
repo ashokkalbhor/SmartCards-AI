@@ -85,25 +85,116 @@ def get_card_master_data_by_id(card_id: int, db: Session = Depends(get_db)):
             joinedload(CardMasterData.merchant_rewards)
         ).filter(CardMasterData.id == card_id).first()
         
-        # Check if card has spending categories and merchant rewards
-        # If not, create default editable templates
-        if not card_with_relations.spending_categories:
-            print(f"Creating default spending categories for card {card_id}")
-            card_with_relations.spending_categories = create_default_spending_categories_for_card(
-                card_id, 
-                card_with_relations.card_tier or "basic", 
-                card_with_relations.bank_name, 
-                db
-            )
+        # Always show all spending categories and merchant rewards with default values
+        # Get existing data and merge with default templates
+        existing_categories = {cat.category_name: cat for cat in card_with_relations.spending_categories}
+        existing_merchants = {merchant.merchant_name: merchant for merchant in card_with_relations.merchant_rewards}
         
-        if not card_with_relations.merchant_rewards:
-            print(f"Creating default merchant rewards for card {card_id}")
-            card_with_relations.merchant_rewards = create_default_merchant_rewards_for_card(
-                card_id, 
-                card_with_relations.card_tier or "basic", 
-                card_with_relations.bank_name, 
-                db
-            )
+        # Get default templates
+        default_categories = create_default_spending_categories_for_card(
+            card_id, 
+            card_with_relations.card_tier or "basic", 
+            card_with_relations.bank_name
+        )
+        
+        default_merchants = create_default_merchant_rewards_for_card(
+            card_id, 
+            card_with_relations.card_tier or "basic", 
+            card_with_relations.bank_name
+        )
+        
+        # Merge existing data with defaults, showing "N/A" for missing data
+        merged_categories = []
+        for default_cat in default_categories:
+            if default_cat["category_name"] in existing_categories:
+                # Use existing data
+                existing_cat = existing_categories[default_cat["category_name"]]
+                merged_categories.append({
+                    "id": existing_cat.id,
+                    "card_master_id": existing_cat.card_master_id,
+                    "category_name": existing_cat.category_name,
+                    "category_display_name": existing_cat.category_display_name,
+                    "reward_rate": existing_cat.reward_rate,
+                    "reward_type": existing_cat.reward_type,
+                    "reward_cap": existing_cat.reward_cap,
+                    "reward_cap_period": existing_cat.reward_cap_period,
+                    "minimum_transaction_amount": existing_cat.minimum_transaction_amount,
+                    "is_active": existing_cat.is_active,
+                    "valid_from": existing_cat.valid_from,
+                    "valid_until": existing_cat.valid_until,
+                    "additional_conditions": existing_cat.additional_conditions,
+                    "created_at": existing_cat.created_at,
+                    "updated_at": existing_cat.updated_at,
+                    "reward_display": existing_cat.reward_display
+                })
+            else:
+                # Use default with "Not Available" indicator
+                merged_categories.append({
+                    "id": None,
+                    "card_master_id": card_id,
+                    "category_name": default_cat["category_name"],
+                    "category_display_name": default_cat["category_display_name"],
+                    "reward_rate": 0.0,  # Not Available
+                    "reward_type": "points",
+                    "reward_cap": None,
+                    "reward_cap_period": None,
+                    "minimum_transaction_amount": None,
+                    "is_active": False,  # Mark as inactive for Not Available
+                    "valid_from": None,
+                    "valid_until": None,
+                    "additional_conditions": "Not Available - No data available",
+                    "created_at": None,
+                    "updated_at": None,
+                    "reward_display": "Not Available"
+                })
+        
+        merged_merchants = []
+        for default_merchant in default_merchants:
+            if default_merchant["merchant_name"] in existing_merchants:
+                # Use existing data
+                existing_merchant = existing_merchants[default_merchant["merchant_name"]]
+                merged_merchants.append({
+                    "id": existing_merchant.id,
+                    "card_master_id": existing_merchant.card_master_id,
+                    "merchant_name": existing_merchant.merchant_name,
+                    "merchant_display_name": existing_merchant.merchant_display_name,
+                    "merchant_category": existing_merchant.merchant_category,
+                    "reward_rate": existing_merchant.reward_rate,
+                    "reward_type": existing_merchant.reward_type,
+                    "reward_cap": existing_merchant.reward_cap,
+                    "reward_cap_period": existing_merchant.reward_cap_period,
+                    "minimum_transaction_amount": existing_merchant.minimum_transaction_amount,
+                    "is_active": existing_merchant.is_active,
+                    "valid_from": existing_merchant.valid_from,
+                    "valid_until": existing_merchant.valid_until,
+                    "requires_registration": existing_merchant.requires_registration if existing_merchant.requires_registration is not None else False,
+                    "additional_conditions": existing_merchant.additional_conditions,
+                    "created_at": existing_merchant.created_at,
+                    "updated_at": existing_merchant.updated_at,
+                    "reward_display": existing_merchant.reward_display
+                })
+            else:
+                # Use default with "Not Available" indicator
+                merged_merchants.append({
+                    "id": None,
+                    "card_master_id": card_id,
+                    "merchant_name": default_merchant["merchant_name"],
+                    "merchant_display_name": default_merchant["merchant_display_name"],
+                    "merchant_category": default_merchant["merchant_category"],
+                    "reward_rate": 0.0,  # Not Available
+                    "reward_type": "cashback",
+                    "reward_cap": None,
+                    "reward_cap_period": None,
+                    "minimum_transaction_amount": None,
+                    "is_active": False,  # Mark as inactive for Not Available
+                    "valid_from": None,
+                    "valid_until": None,
+                    "requires_registration": False,
+                    "additional_conditions": "Not Available - No data available",
+                    "created_at": None,
+                    "updated_at": None,
+                    "reward_display": "Not Available"
+                })
         
         # Convert to dict and back to handle None values properly
         card_dict = {
@@ -156,48 +247,8 @@ def get_card_master_data_by_id(card_id: int, db: Session = Depends(get_db)):
             "display_name": card_with_relations.display_name,
             "joining_fee_display": card_with_relations.joining_fee_display,
             "annual_fee_display": card_with_relations.annual_fee_display,
-            "spending_categories": [
-                {
-                    "id": cat.id,
-                    "card_master_id": cat.card_master_id,
-                    "category_name": cat.category_name,
-                    "category_display_name": cat.category_display_name,
-                    "reward_rate": cat.reward_rate,
-                    "reward_type": cat.reward_type,
-                    "reward_cap": cat.reward_cap,
-                    "reward_cap_period": cat.reward_cap_period,
-                    "minimum_transaction_amount": cat.minimum_transaction_amount,
-                    "is_active": cat.is_active,
-                    "valid_from": cat.valid_from,
-                    "valid_until": cat.valid_until,
-                    "additional_conditions": cat.additional_conditions,
-                    "created_at": cat.created_at,
-                    "updated_at": cat.updated_at,
-                    "reward_display": cat.reward_display
-                } for cat in card_with_relations.spending_categories
-            ],
-            "merchant_rewards": [
-                {
-                    "id": reward.id,
-                    "card_master_id": reward.card_master_id,
-                    "merchant_name": reward.merchant_name,
-                    "merchant_display_name": reward.merchant_display_name,
-                    "merchant_category": reward.merchant_category,
-                    "reward_rate": reward.reward_rate,
-                    "reward_type": reward.reward_type,
-                    "reward_cap": reward.reward_cap,
-                    "reward_cap_period": reward.reward_cap_period,
-                    "minimum_transaction_amount": reward.minimum_transaction_amount,
-                    "is_active": reward.is_active,
-                    "valid_from": reward.valid_from,
-                    "valid_until": reward.valid_until,
-                    "requires_registration": reward.requires_registration if reward.requires_registration is not None else False,
-                    "additional_conditions": reward.additional_conditions,
-                    "created_at": reward.created_at,
-                    "updated_at": reward.updated_at,
-                    "reward_display": reward.reward_display
-                } for reward in card_with_relations.merchant_rewards
-            ]
+            "spending_categories": merged_categories,
+            "merchant_rewards": merged_merchants
         }
         
         # Create response using the schema

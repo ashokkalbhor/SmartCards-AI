@@ -8,6 +8,7 @@ import { ArrowLeft, CreditCard, Star, MessageSquare, ThumbsUp, ThumbsDown, User,
 import EditSuggestionModal from '../../components/UI/EditSuggestionModal';
 import DocumentSubmissionModal from '../../components/UI/DocumentSubmissionModal';
 import CreatePostModal from '../../components/UI/CreatePostModal';
+import EditableRewardsSection from '../../components/UI/EditableRewardsSection';
 
 interface CardData {
   id: number;
@@ -250,6 +251,28 @@ const CardDetailPage: React.FC = () => {
     }
   };
 
+  const handleSpendingCategoriesEdit = async (updatedCategories: any[]) => {
+    try {
+      // Here you would typically call an API to update the spending categories
+      console.log('Updated spending categories:', updatedCategories);
+      // For now, just reload the card data
+      loadCardData();
+    } catch (error) {
+      console.error('Error updating spending categories:', error);
+    }
+  };
+
+  const handleMerchantRewardsEdit = async (updatedMerchants: any[]) => {
+    try {
+      // Here you would typically call an API to update the merchant rewards
+      console.log('Updated merchant rewards:', updatedMerchants);
+      // For now, just reload the card data
+      loadCardData();
+    } catch (error) {
+      console.error('Error updating merchant rewards:', error);
+    }
+  };
+
   const handleCreatePost = async (postData: { title: string; body?: string }) => {
     try {
       await communityAPI.createPost(cardId!, postData);
@@ -377,94 +400,22 @@ const CardDetailPage: React.FC = () => {
               </div>
 
               {/* Spending Categories and Merchant Rewards */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Spending Categories */}
-                <div className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-4 h-80">
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Spending Categories</h3>
-                  {cardData.spending_categories && cardData.spending_categories.length > 0 ? (
-                    <div className="space-y-3">
-                      <div className={`space-y-3 ${showAllCategories ? 'h-64 overflow-y-auto' : 'h-52 overflow-hidden'}`}>
-                        {cardData.spending_categories.slice(0, showAllCategories ? undefined : 3).map((category) => (
-                          <div key={category.id} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-600 rounded-lg group">
-                            <span className="text-sm font-medium text-gray-900 dark:text-white capitalize">
-                              {category.category_display_name.replace(/_/g, ' ')}
-                            </span>
-                            <div className="flex items-center space-x-2">
-                              <span className="text-sm text-green-600 dark:text-green-400 font-semibold">
-                                {category.reward_display}
-                              </span>
-                              <button
-                                onClick={() => handleEditSuggestion('spending_category', category.category_name, category.reward_rate.toString())}
-                                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-gray-400 hover:text-primary-600 dark:hover:text-primary-400"
-                                title="Suggest edit"
-                              >
-                                <Edit3 className="w-3 h-3" />
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                      
-                      {cardData.spending_categories.length > 3 && (
-                        <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
-                          <button
-                            onClick={() => setShowAllCategories(!showAllCategories)}
-                            className="w-full flex items-center justify-center space-x-2 text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium transition-colors"
-                          >
-                            <span>{showAllCategories ? 'See Less' : `See More (${cardData.spending_categories.length - 3} more)`}</span>
-                            {showAllCategories ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <p className="text-gray-500 dark:text-gray-400 text-sm">No spending categories available</p>
-                  )}
-                </div>
-
-                {/* Merchant Rewards */}
-                <div className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-4 h-80">
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Merchant Rewards</h3>
-                  {cardData.merchant_rewards && cardData.merchant_rewards.length > 0 ? (
-                    <div className="space-y-3">
-                      <div className={`space-y-3 ${showAllMerchants ? 'h-64 overflow-y-auto' : 'h-52 overflow-hidden'}`}>
-                        {cardData.merchant_rewards.slice(0, showAllMerchants ? undefined : 3).map((merchant) => (
-                          <div key={merchant.id} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-600 rounded-lg group">
-                            <span className="text-sm font-medium text-gray-900 dark:text-white capitalize">
-                              {merchant.merchant_display_name.replace(/_/g, ' ')}
-                            </span>
-                            <div className="flex items-center space-x-2">
-                              <span className="text-sm text-blue-600 dark:text-blue-400 font-semibold">
-                                {merchant.reward_display}
-                              </span>
-                              <button
-                                onClick={() => handleEditSuggestion('merchant_reward', merchant.merchant_name, merchant.reward_rate.toString())}
-                                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-gray-400 hover:text-primary-600 dark:hover:text-primary-400"
-                                title="Suggest edit"
-                              >
-                                <Edit3 className="w-3 h-3" />
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                      
-                      {cardData.merchant_rewards.length > 3 && (
-                        <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
-                          <button
-                            onClick={() => setShowAllMerchants(!showAllMerchants)}
-                            className="w-full flex items-center justify-center space-x-2 text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium transition-colors"
-                          >
-                            <span>{showAllMerchants ? 'See Less' : `See More (${cardData.merchant_rewards.length - 3} more)`}</span>
-                            {showAllMerchants ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <p className="text-gray-500 dark:text-gray-400 text-sm">No merchant rewards available</p>
-                  )}
-                </div>
+              <div className="space-y-6">
+                <EditableRewardsSection
+                  title="Spending Categories"
+                  items={cardData.spending_categories || []}
+                  type="spending"
+                  onEdit={handleSpendingCategoriesEdit}
+                  isEditable={true}
+                />
+                
+                <EditableRewardsSection
+                  title="Merchant Rewards"
+                  items={cardData.merchant_rewards || []}
+                  type="merchant"
+                  onEdit={handleMerchantRewardsEdit}
+                  isEditable={true}
+                />
               </div>
             </div>
           </div>

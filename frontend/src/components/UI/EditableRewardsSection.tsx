@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Edit3, Check, X, Plus } from 'lucide-react';
 
 interface RewardItem {
   id?: number;
@@ -13,6 +14,8 @@ interface RewardItem {
   reward_cap_period?: string | null;
   is_active: boolean;
   is_editable?: boolean;
+  reward_display: string;
+  additional_conditions?: string;
 }
 
 interface EditableRewardsSectionProps {
@@ -35,192 +38,187 @@ const EditableRewardsSection: React.FC<EditableRewardsSectionProps> = ({
 
   const handleEdit = () => {
     setIsEditing(true);
+    setEditedItems([...items]);
   };
 
   const handleSave = () => {
-    if (onEdit) {
-      onEdit(editedItems);
-    }
     setIsEditing(false);
+    onEdit?.(editedItems);
   };
 
   const handleCancel = () => {
-    setEditedItems(items);
     setIsEditing(false);
+    setEditedItems(items);
   };
 
-  const updateItem = (index: number, field: keyof RewardItem, value: any) => {
-    const newItems = [...editedItems];
-    newItems[index] = { ...newItems[index], [field]: value };
-    setEditedItems(newItems);
+  const handleItemChange = (index: number, field: keyof RewardItem, value: any) => {
+    const updatedItems = [...editedItems];
+    updatedItems[index] = { ...updatedItems[index], [field]: value };
+    setEditedItems(updatedItems);
   };
 
-  const addItem = () => {
-    const newItem: RewardItem = {
-      reward_rate: 1.0,
-      reward_type: 'points',
-      is_active: true,
-      is_editable: true
-    };
-    setEditedItems([...editedItems, newItem]);
+  const isNotAvailable = (item: RewardItem) => {
+    return item.reward_display === "Not Available" || !item.is_active;
   };
 
-  const removeItem = (index: number) => {
-    const newItems = editedItems.filter((_, i) => i !== index);
-    setEditedItems(newItems);
-  };
-
-  if (items.length === 0 && !isEditing) {
+  const getRewardDisplay = (item: RewardItem) => {
+    if (isNotAvailable(item)) {
+      return (
+        <span className="text-gray-500 dark:text-gray-400 italic">
+          Not Available
+        </span>
+      );
+    }
     return (
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-          {isEditable && (
-            <button
-              onClick={handleEdit}
-              className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-            >
-              Add {type === 'spending' ? 'Categories' : 'Merchants'}
-            </button>
-          )}
-        </div>
-        <div className="text-gray-500 text-center py-4">
-          No {type === 'spending' ? 'spending categories' : 'merchant rewards'} available yet.
-          {isEditable && (
-            <span className="block mt-2 text-sm">
-              Click "Add {type === 'spending' ? 'Categories' : 'Merchants'}" to get started.
-            </span>
-          )}
-        </div>
-      </div>
+      <span className="font-medium text-green-600 dark:text-green-400">
+        {item.reward_display}
+      </span>
     );
-  }
+  };
+
+  const getItemBackground = (item: RewardItem) => {
+    if (isNotAvailable(item)) {
+      return "bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700";
+    }
+    return "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700";
+  };
 
   return (
-    <div className="bg-white rounded-lg shadow p-6 mb-6">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-        {isEditable && (
-          <div className="flex space-x-2">
-            {isEditing ? (
-              <>
-                <button
-                  onClick={handleSave}
-                  className="text-green-600 hover:text-green-800 text-sm font-medium"
-                >
-                  Save
-                </button>
-                <button
-                  onClick={handleCancel}
-                  className="text-gray-600 hover:text-gray-800 text-sm font-medium"
-                >
-                  Cancel
-                </button>
-              </>
-            ) : (
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+      <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+            {title}
+          </h2>
+          {isEditable && !isEditing && (
+            <button
+              onClick={handleEdit}
+              className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm flex items-center"
+            >
+              <Edit3 className="w-4 h-4 mr-1" />
+              Edit
+            </button>
+          )}
+          {isEditing && (
+            <div className="flex space-x-2">
               <button
-                onClick={handleEdit}
-                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                onClick={handleSave}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors text-sm flex items-center"
               >
-                Edit
+                <Check className="w-4 h-4 mr-1" />
+                Save
               </button>
-            )}
-          </div>
-        )}
+              <button
+                onClick={handleCancel}
+                className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors text-sm flex items-center"
+              >
+                <X className="w-4 h-4 mr-1" />
+                Cancel
+              </button>
+            </div>
+          )}
+        </div>
       </div>
-
-      <div className="space-y-4">
-        {(isEditing ? editedItems : items).map((item, index) => (
-          <div key={index} className="border rounded-lg p-4 bg-gray-50">
-            {isEditing ? (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {type === 'spending' ? 'Category' : 'Merchant'}
-                  </label>
-                  <input
-                    type="text"
-                    value={type === 'spending' ? item.category_display_name || '' : item.merchant_display_name || ''}
-                    onChange={(e) => updateItem(index, type === 'spending' ? 'category_display_name' : 'merchant_display_name', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder={type === 'spending' ? 'e.g., Dining' : 'e.g., Amazon'}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Reward Rate
-                  </label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={item.reward_rate}
-                    onChange={(e) => updateItem(index, 'reward_rate', parseFloat(e.target.value))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Reward Type
-                  </label>
-                  <select
-                    value={item.reward_type}
-                    onChange={(e) => updateItem(index, 'reward_type', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="points">Points</option>
-                    <option value="cashback">Cashback</option>
-                    <option value="miles">Miles</option>
-                  </select>
-                </div>
-                <div className="md:col-span-3 flex justify-between items-center">
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={item.is_active}
-                      onChange={(e) => updateItem(index, 'is_active', e.target.checked)}
-                      className="mr-2"
-                    />
-                    <span className="text-sm text-gray-700">Active</span>
-                  </label>
-                  <button
-                    onClick={() => removeItem(index)}
-                    className="text-red-600 hover:text-red-800 text-sm font-medium"
-                  >
-                    Remove
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex justify-between items-center">
-                <div>
-                  <h4 className="font-medium text-gray-900">
+      
+      <div className="p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {items.map((item, index) => (
+            <div
+              key={index}
+              className={`p-4 rounded-lg border ${getItemBackground(item)} transition-colors`}
+            >
+              <div className="flex items-start justify-between mb-2">
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-900 dark:text-white">
                     {type === 'spending' ? item.category_display_name : item.merchant_display_name}
-                  </h4>
-                  <p className="text-sm text-gray-600">
-                    {item.reward_rate} {item.reward_type} per ₹100
-                  </p>
+                  </h3>
+                  {type === 'merchant' && item.merchant_category && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">
+                      {item.merchant_category.replace('_', ' ')}
+                    </p>
+                  )}
                 </div>
-                <div className="text-right">
-                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                    item.is_active 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-gray-100 text-gray-800'
-                  }`}>
-                    {item.is_active ? 'Active' : 'Inactive'}
+                {isNotAvailable(item) && (
+                  <span className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-1 rounded">
+                    Not Available
                   </span>
-                </div>
+                )}
               </div>
-            )}
-          </div>
-        ))}
+              
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Reward:</span>
+                  {getRewardDisplay(item)}
+                </div>
+                
+                {!isNotAvailable(item) && item.reward_cap && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Cap:</span>
+                    <span className="text-sm text-gray-900 dark:text-white">
+                      ₹{item.reward_cap.toLocaleString()}/{item.reward_cap_period}
+                    </span>
+                  </div>
+                )}
+                
+                {isEditing && !isNotAvailable(item) && (
+                  <div className="space-y-2 pt-2 border-t border-gray-200 dark:border-gray-600">
+                    <div>
+                      <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
+                        Reward Rate (%)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        max="100"
+                        value={item.reward_rate}
+                        onChange={(e) => handleItemChange(index, 'reward_rate', parseFloat(e.target.value) || 0)}
+                        className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
+                        Reward Type
+                      </label>
+                      <select
+                        value={item.reward_type}
+                        onChange={(e) => handleItemChange(index, 'reward_type', e.target.value)}
+                        className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                      >
+                        <option value="points">Points</option>
+                        <option value="cashback">Cashback</option>
+                        <option value="rewards">Rewards</option>
+                      </select>
+                    </div>
+                    
+                    {item.reward_cap !== undefined && (
+                      <div>
+                        <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
+                          Reward Cap (₹)
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={item.reward_cap || ''}
+                          onChange={(e) => handleItemChange(index, 'reward_cap', parseFloat(e.target.value) || null)}
+                          className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
         
-        {isEditing && (
-          <button
-            onClick={addItem}
-            className="w-full py-2 px-4 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-gray-400 hover:text-gray-700 transition-colors"
-          >
-            + Add {type === 'spending' ? 'Category' : 'Merchant'}
-          </button>
+        {items.length === 0 && (
+          <div className="text-center py-8">
+            <p className="text-gray-500 dark:text-gray-400">
+              No {type === 'spending' ? 'spending categories' : 'merchant rewards'} available.
+            </p>
+          </div>
         )}
       </div>
     </div>
