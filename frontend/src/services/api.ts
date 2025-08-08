@@ -525,6 +525,23 @@ export const cardDocumentsAPI = {
     const response = await api.get(`/card-documents/approved/${cardId}`);
     return response.data;
   },
+
+  downloadDocument: async (documentId: number) => {
+    // Create a direct download link
+    const baseURL = process.env.NODE_ENV === 'production' 
+      ? 'https://smartcards-ai-2.onrender.com/api/v1'  // Render backend URL
+      : 'http://localhost:8000/api/v1';
+    
+    const downloadURL = `${baseURL}/card-documents/download/${documentId}`;
+    
+    // Create a temporary link and trigger download
+    const link = document.createElement('a');
+    link.href = downloadURL;
+    link.download = ''; // Let the server set the filename
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  },
 };
 
 export default api; 

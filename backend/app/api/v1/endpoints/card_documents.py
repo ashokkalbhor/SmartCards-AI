@@ -1,5 +1,6 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Form
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
 import os
@@ -125,6 +126,40 @@ async def submit_card_document(
     db.refresh(card_document)
     
     return {"message": "Document submission successful"}
+
+
+@router.get("/download/{document_id}")
+async def download_document(
+    document_id: int,
+    db: Session = Depends(get_db)
+):
+    """Download an approved document file"""
+    # Get the document
+    document = db.query(CardDocument).filter(CardDocument.id == document_id).first()
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    # Only allow download of approved documents
+    if document.status != "approved":
+        raise HTTPException(status_code=403, detail="Document not approved for download")
+    
+    # Only allow download of file type documents
+    if document.document_type != "file":
+        raise HTTPException(status_code=400, detail="Only file documents can be downloaded")
+    
+    # Check if file exists
+    if not document.content or not os.path.exists(document.content):
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    # Get original filename for download
+    original_filename = document.file_name or f"document_{document_id}.pdf"
+    
+    # Return the file for download
+    return FileResponse(
+        path=document.content,
+        filename=original_filename,
+        media_type=document.file_type or "application/octet-stream"
+    )
 
 
 @router.get("/my-submissions", response_model=List[CardDocumentResponse])

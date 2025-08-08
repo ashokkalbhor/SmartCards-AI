@@ -4,7 +4,7 @@ import { cardMasterDataAPI, cardReviewsAPI, cardDocumentsAPI, communityAPI } fro
 import { useAuth } from '../../hooks/useAuth';
 import ReviewForm from '../../components/UI/ReviewForm';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
-import { ArrowLeft, CreditCard, Star, MessageSquare, ThumbsUp, ThumbsDown, User, CheckCircle, ChevronDown, ChevronUp, Edit3, FileText, Upload, ExternalLink, Plus } from 'lucide-react';
+import { ArrowLeft, CreditCard, Star, MessageSquare, ThumbsUp, ThumbsDown, User, CheckCircle, ChevronDown, ChevronUp, Edit3, FileText, Upload, ExternalLink, Plus, Download } from 'lucide-react';
 import EditSuggestionModal from '../../components/UI/EditSuggestionModal';
 import DocumentSubmissionModal from '../../components/UI/DocumentSubmissionModal';
 import CreatePostModal from '../../components/UI/CreatePostModal';
@@ -239,6 +239,15 @@ const CardDetailPage: React.FC = () => {
   const handleDocumentSubmissionSuccess = () => {
     // Reload approved documents
     loadApprovedDocuments();
+  };
+
+  const handleDownloadDocument = async (documentId: number) => {
+    try {
+      await cardDocumentsAPI.downloadDocument(documentId);
+    } catch (error) {
+      console.error('Error downloading document:', error);
+      // You could add a toast notification here
+    }
   };
 
   const handleCreatePost = async (postData: { title: string; body?: string }) => {
@@ -632,6 +641,16 @@ const CardDetailPage: React.FC = () => {
                               <ExternalLink className="w-3 h-3 mr-1" />
                               View Document
                             </a>
+                          )}
+                          
+                          {document.document_type === 'file' && (
+                            <button
+                              onClick={() => handleDownloadDocument(document.id)}
+                              className="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 text-sm flex items-center transition-colors"
+                            >
+                              <Download className="w-3 h-3 mr-1" />
+                              Download File
+                            </button>
                           )}
                           
                           {(document.document_type === 'policy_update' || document.document_type === 'terms_change') && (
