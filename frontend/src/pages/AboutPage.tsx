@@ -100,10 +100,6 @@ const AboutPage: React.FC = () => {
                     <span>ashokkalbhor@gmail.com</span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Phone className="h-4 w-4" />
-                    <span>+91 90080 90856</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
                     <Linkedin className="h-4 w-4" />
                     <a 
                       href="https://www.linkedin.com/in/ashok-kumar-kalbhor/" 
