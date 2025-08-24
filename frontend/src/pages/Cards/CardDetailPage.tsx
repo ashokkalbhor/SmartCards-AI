@@ -97,7 +97,7 @@ const CardDetailPage: React.FC = () => {
   // Edit suggestion modal state
   const [showEditSuggestionModal, setShowEditSuggestionModal] = useState(false);
   const [editSuggestionData, setEditSuggestionData] = useState<{
-    fieldType: 'spending_category' | 'merchant_reward';
+    fieldType: 'spending_category' | 'merchant_reward' | 'spending_category_cap' | 'merchant_reward_cap';
     fieldName: string;
     currentValue: string;
   } | null>(null);
@@ -221,7 +221,7 @@ const CardDetailPage: React.FC = () => {
     }
   };
 
-  const handleEditSuggestion = (fieldType: 'spending_category' | 'merchant_reward', fieldName: string, currentValue: string) => {
+  const handleEditSuggestion = (fieldType: 'spending_category' | 'merchant_reward' | 'spending_category_cap' | 'merchant_reward_cap', fieldName: string, currentValue: string) => {
     setEditSuggestionData({
       fieldType,
       fieldName,

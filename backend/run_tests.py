@@ -13,7 +13,7 @@ def run_tests():
     print("=" * 50)
     
     # Install test dependencies
-    print("📦 Installing test dependencies...")
+    print("📦 Installing test dependency...")
     subprocess.run([sys.executable, "-m", "pip", "install", "-r", "requirements-test.txt"], check=True)
     
     # Run tests with coverage

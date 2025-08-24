@@ -7,7 +7,7 @@ interface EditSuggestionModalProps {
   onClose: () => void;
   cardId: number;
   cardName: string;
-  fieldType: 'spending_category' | 'merchant_reward';
+  fieldType: 'spending_category' | 'merchant_reward' | 'spending_category_cap' | 'merchant_reward_cap';
   fieldName: string;
   currentValue: string;
   onSuccess?: () => void;

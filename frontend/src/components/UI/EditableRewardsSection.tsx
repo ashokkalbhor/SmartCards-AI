@@ -24,7 +24,7 @@ interface EditableRewardsSectionProps {
   type: 'spending' | 'merchant';
   onEdit?: (items: RewardItem[]) => void;
   isEditable?: boolean;
-  onEditSuggestion?: (fieldType: 'spending_category' | 'merchant_reward', fieldName: string, currentValue: string) => void;
+  onEditSuggestion?: (fieldType: 'spending_category' | 'merchant_reward' | 'spending_category_cap' | 'merchant_reward_cap', fieldName: string, currentValue: string) => void;
 }
 
 const EditableRewardsSection: React.FC<EditableRewardsSectionProps> = ({
@@ -119,14 +119,27 @@ const EditableRewardsSection: React.FC<EditableRewardsSectionProps> = ({
                   </div>
                 </div>
                 
-                {!isNotAvailable(item) && item.reward_cap && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Cap:</span>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Cap:</span>
+                  <div className="flex items-center space-x-2">
                     <span className="text-sm text-gray-900 dark:text-white">
-                      ₹{item.reward_cap.toLocaleString()}/{item.reward_cap_period}
+                      {item.reward_cap ? `₹${item.reward_cap.toLocaleString()}/${item.reward_cap_period || 'monthly'}` : 'Not Available'}
                     </span>
+                    {isEditable && onEditSuggestion && (
+                      <button
+                        onClick={() => onEditSuggestion(
+                          type === 'spending' ? 'spending_category_cap' : 'merchant_reward_cap',
+                          type === 'spending' ? item.category_name! : item.merchant_name!,
+                          item.reward_cap ? item.reward_cap.toString() : '0'
+                        )}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-gray-400 hover:text-primary-600 dark:hover:text-primary-400"
+                        title="Suggest edit cap"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                      </button>
+                    )}
                   </div>
-                )}
+                </div>
                 
 
               </div>
