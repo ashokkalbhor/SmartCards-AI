@@ -15,7 +15,7 @@ def test_api():
         response = requests.get(f"{base_url}/docs")
         if response.status_code == 200:
             print("✅ Backend server is running!")
-            print(f"📖 API Documentation: {base_url}/docs")
+            print(f"📖 API Documentations: {base_url}/docs")
         else:
             print(f"❌ Backend server returned status: {response.status_code}")
             return False
