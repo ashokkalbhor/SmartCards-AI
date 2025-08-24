@@ -1,0 +1,2 @@
+VERSION=20241220-143000
+# Force rebuild: $(date)

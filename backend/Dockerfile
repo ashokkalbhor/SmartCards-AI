@@ -1,5 +1,8 @@
 FROM python:3.11-slim
 
+# Add cache busting
+ARG CACHEBUST=1
+
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
@@ -21,7 +24,7 @@ COPY requirements-render.txt requirements.txt
 RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt
 
-# Copy project
+# Copy project (this will be affected by CACHEBUST)
 COPY . .
 
 # Create non-root user
