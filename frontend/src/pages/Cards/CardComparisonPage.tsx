@@ -275,7 +275,7 @@ const CardComparisonPage: React.FC = () => {
           cellElement.style.border = '1px solid #e0e0e0';
           cellElement.style.padding = '8px';
           cellElement.style.textAlign = 'center';
-          cellElement.style.fontSize = '11px';
+          cellElement.style.fontSize = '16px';
           cellElement.style.fontFamily = 'Inter, system-ui, sans-serif';
           cellElement.style.color = '#333333'; // Ensure dark text for visibility
         });
@@ -299,7 +299,7 @@ const CardComparisonPage: React.FC = () => {
             cellElement.style.backgroundColor = '#1976d2';
             cellElement.style.color = 'white';
             cellElement.style.fontWeight = 'bold';
-            cellElement.style.fontSize = '12px';
+            cellElement.style.fontSize = '20px';
           });
         }
         
@@ -315,7 +315,7 @@ const CardComparisonPage: React.FC = () => {
           )) {
             cellElement.style.backgroundColor = '#fff8e1';
             cellElement.style.fontWeight = 'bold';
-            cellElement.style.fontSize = '12px';
+            cellElement.style.fontSize = '18px';
             cellElement.style.color = '#333333'; // Ensure dark text on light yellow background
           }
         });
@@ -435,22 +435,13 @@ const CardComparisonPage: React.FC = () => {
               console.log(`Cell ${cellIndex} text length:`, textLength);
               console.log(`Cell ${cellIndex} text:`, cellElement.textContent);
               
-              // Dynamic font sizing based on text length
-              let fontSize = '12px'; // Default size
-              if (textLength > 80) {
-                fontSize = '10px'; // Very long text
-              } else if (textLength > 50) {
-                fontSize = '11px'; // Long text
-              } else if (textLength > 30) {
-                fontSize = '12px'; // Medium text
-              } else {
-                fontSize = '13px'; // Short text
-              }
+              // Fixed font size for better readability
+              const fontSize = '16px';
               
               console.log(`Cell ${cellIndex} font size set to:`, fontSize);
               
               cellElement.style.color = '#000000'; // Force dark text for visibility
-              cellElement.style.fontSize = fontSize; // Dynamic font size
+              cellElement.style.fontSize = fontSize; // Fixed font size
               cellElement.style.textAlign = 'left'; // Left align for better readability
               cellElement.style.fontWeight = 'normal'; // Normal weight for content
               cellElement.style.backgroundColor = '#fff8e1'; // Keep light yellow background
@@ -502,17 +493,8 @@ const CardComparisonPage: React.FC = () => {
                 const cellElement = cell as HTMLElement;
                 const textLength = cellElement.textContent?.length || 0;
                 
-                // Dynamic font sizing based on text length
-                let fontSize = '12px';
-                if (textLength > 80) {
-                  fontSize = '10px';
-                } else if (textLength > 50) {
-                  fontSize = '11px';
-                } else if (textLength > 30) {
-                  fontSize = '12px';
-                } else {
-                  fontSize = '13px';
-                }
+                // Fixed font size for better readability
+                const fontSize = '16px';
                 
                 cellElement.style.color = '#000000';
                 cellElement.style.fontSize = fontSize;
