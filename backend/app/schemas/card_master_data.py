@@ -8,7 +8,15 @@ class CardTierEnum(str, Enum):
     BASIC = "basic"
     PREMIUM = "premium"
     SUPER_PREMIUM = "super_premium"
+    SUPER_PREMIUM_HYPHEN = "super-premium"
     ELITE = "elite"
+    STANDARD = "standard"
+    GOLD = "gold"
+    PLATINUM = "platinum"
+    BUSINESS = "business"
+    MID_PREMIUM = "mid_premium"
+    ULTRA_PREMIUM = "ultra_premium"
+    ULTRA_PREMIUM_HYPHEN = "ultra-premium"
 
 
 class RewardTypeEnum(str, Enum):
@@ -126,7 +134,7 @@ class CardSpendingCategoryBase(BaseModel):
     reward_cap: Optional[float] = None
     reward_cap_period: Optional[str] = Field(None, max_length=20)
     minimum_transaction_amount: Optional[float] = None
-    is_active: bool = True
+    is_active: Optional[bool] = True
     valid_from: Optional[datetime] = None
     valid_until: Optional[datetime] = None
     additional_conditions: Optional[str] = None
@@ -159,7 +167,7 @@ class CardMerchantRewardBase(BaseModel):
     reward_cap: Optional[float] = None
     reward_cap_period: Optional[str] = Field(None, max_length=20)
     minimum_transaction_amount: Optional[float] = None
-    is_active: bool = True
+    is_active: Optional[bool] = True
     valid_from: Optional[datetime] = None
     valid_until: Optional[datetime] = None
     requires_registration: bool = False

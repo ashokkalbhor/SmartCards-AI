@@ -85,6 +85,12 @@ class Settings(BaseSettings):
     MAX_CONVERSATION_HISTORY: int = 10
     FALLBACK_TO_LLM_THRESHOLD: float = 0.6
     
+    # Comparison Configuration
+    TOP_MERCHANTS_LIMIT: int = 10
+    POPULARITY_COVERAGE_WEIGHT: float = 0.4
+    POPULARITY_REWARD_WEIGHT: float = 0.4
+    POPULARITY_MAX_REWARD_WEIGHT: float = 0.2
+    
     @field_validator("DATABASE_URL", mode="before")
     @classmethod
     def assemble_db_connection(cls, v: Optional[str], values: dict) -> str:

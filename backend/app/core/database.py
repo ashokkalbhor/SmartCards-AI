@@ -2,6 +2,7 @@ from sqlalchemy import create_engine, MetaData
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from fastapi import HTTPException
 import structlog
 from typing import AsyncGenerator
 
@@ -64,6 +65,10 @@ def get_db():
     db = SessionLocal()
     try:
         yield db
+    except HTTPException:
+        # Re-raise HTTPExceptions without logging them as database errors
+        db.rollback()
+        raise
     except Exception as e:
         logger.error("Database session error", error=str(e))
         db.rollback()

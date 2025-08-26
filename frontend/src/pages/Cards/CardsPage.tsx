@@ -13,6 +13,7 @@ interface Card {
   current_balance: number | null;
   credit_limit: number | null;
   reward_rate_general: number | null;
+  card_master_data_id?: number | null;
 }
 
 const CardsPage: React.FC = () => {
@@ -59,7 +60,9 @@ const CardsPage: React.FC = () => {
   }, []);
 
   const handleViewCard = (cardId: number) => {
-    navigate(`/card/${cardId}`);
+    const card = cards.find(c => c.id === cardId);
+    const targetId = card?.card_master_data_id || cardId;
+    navigate(`/card/${targetId}`);
   };
 
   const handleEditCard = (cardId: number) => {

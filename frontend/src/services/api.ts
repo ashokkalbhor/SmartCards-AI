@@ -217,6 +217,35 @@ export const cardMasterDataAPI = {
     const response = await api.get('/card-master-data/merchants');
     return response.data;
   },
+
+  // New merchant popularity API
+  getMerchantPopularity: async (limit?: number, category?: string, tier?: string) => {
+    const params = new URLSearchParams();
+    if (limit) params.append('limit', limit.toString());
+    if (category) params.append('category', category);
+    if (tier) params.append('tier', tier);
+    
+    const response = await api.get(`/merchants/popularity-ranking?${params.toString()}`);
+    return response.data;
+  },
+
+  getMerchantCategories: async () => {
+    const response = await api.get('/merchants/categories');
+    return response.data;
+  },
+
+  getMerchantTiers: async () => {
+    const response = await api.get('/merchants/tiers');
+    return response.data;
+  },
+
+  getGrowthMerchants: async (minGrowthRate?: number) => {
+    const params = new URLSearchParams();
+    if (minGrowthRate) params.append('min_growth_rate', minGrowthRate.toString());
+    
+    const response = await api.get(`/merchants/growth-merchants?${params.toString()}`);
+    return response.data;
+  },
 };
 
 // Card Reviews API

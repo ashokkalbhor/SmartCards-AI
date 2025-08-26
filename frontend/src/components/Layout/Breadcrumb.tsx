@@ -18,6 +18,11 @@ const Breadcrumb: React.FC = () => {
     const pathSegments = location.pathname.split('/').filter(Boolean);
     const breadcrumbs: BreadcrumbItem[] = [];
     
+    // Don't add breadcrumbs for home page
+    if (pathSegments.length === 0) {
+      return breadcrumbs;
+    }
+    
     // Always start with Home - route to dashboard if authenticated, landing page if not
     const homePath = isAuthenticated ? '/dashboard' : '/';
     breadcrumbs.push({
@@ -26,7 +31,8 @@ const Breadcrumb: React.FC = () => {
       isActive: location.pathname === homePath
     });
 
-    if (pathSegments.length === 0) {
+    // Don't add additional breadcrumbs for dashboard page
+    if (pathSegments.length === 1 && pathSegments[0] === 'dashboard') {
       return breadcrumbs;
     }
 
@@ -78,6 +84,8 @@ const Breadcrumb: React.FC = () => {
           label = 'Post Details';
         } else if (previousSegment === 'post') {
           label = 'Post Details';
+        } else if (previousSegment === 'community') {
+          label = 'Card Details';
         } else {
           label = 'Details';
         }
@@ -95,8 +103,8 @@ const Breadcrumb: React.FC = () => {
 
   const breadcrumbs = getBreadcrumbs();
 
-  // Don't show breadcrumb on home page or dashboard (for authenticated users)
-  if (location.pathname === '/' || (isAuthenticated && location.pathname === '/dashboard')) {
+  // Don't show breadcrumb on home page only
+  if (location.pathname === '/') {
     return null;
   }
 

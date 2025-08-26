@@ -212,12 +212,7 @@ class CardSpendingCategory(Base):
         if self.reward_rate == 0:
             return "-"
         
-        reward_text = f"{self.reward_rate}%"
-        if self.reward_cap:
-            cap_period = self.reward_cap_period or "monthly"
-            reward_text += f" (capped at ₹{self.reward_cap:,.0f} {cap_period})"
-        
-        return reward_text
+        return f"{self.reward_rate}%"
 
 
 class CardMerchantReward(Base):
@@ -264,9 +259,4 @@ class CardMerchantReward(Base):
         if self.reward_rate == 0:
             return "-"
         
-        reward_text = f"{self.reward_rate}%"
-        if self.reward_cap:
-            cap_period = self.reward_cap_period or "monthly"
-            reward_text += f" (capped at ₹{self.reward_cap:,.0f} {cap_period})"
-        
-        return reward_text 
+        return f"{self.reward_rate}%" 

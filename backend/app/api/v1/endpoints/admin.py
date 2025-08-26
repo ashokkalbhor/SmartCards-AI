@@ -369,6 +369,44 @@ def review_edit_suggestion(
                         status_code=400,
                         detail=f"Cannot edit cap for non-existent merchant '{suggestion.field_name}'. Please add the merchant first."
                     )
+            elif suggestion.field_type == "basic_info":
+                # Handle basic information fields
+                if suggestion.field_name == "joining_fee":
+                    # Parse the new value - handle different formats
+                    new_value = suggestion.new_value.strip()
+                    if new_value.lower() == "ltf" or new_value.lower() == "lifetime free":
+                        card.is_lifetime_free = True
+                        card.joining_fee = 0
+                    else:
+                        # Extract numeric value from string like "₹500" or "500"
+                        import re
+                        numeric_match = re.search(r'[\d,]+', new_value.replace(',', ''))
+                        if numeric_match:
+                            card.joining_fee = float(numeric_match.group().replace(',', ''))
+                            card.is_lifetime_free = False
+                        else:
+                            raise HTTPException(
+                                status_code=400,
+                                detail="Invalid joining fee format. Please use format like '₹500' or 'LTF'"
+                            )
+                elif suggestion.field_name == "annual_fee":
+                    # Parse the new value - handle different formats
+                    new_value = suggestion.new_value.strip()
+                    if new_value.lower() == "ltf" or new_value.lower() == "lifetime free":
+                        card.is_lifetime_free = True
+                        card.annual_fee = 0
+                    else:
+                        # Extract numeric value from string like "₹500 (Waived on ₹50,000 spend)" or "₹500"
+                        import re
+                        numeric_match = re.search(r'[\d,]+', new_value.replace(',', ''))
+                        if numeric_match:
+                            card.annual_fee = float(numeric_match.group().replace(',', ''))
+                            card.is_lifetime_free = False
+                        else:
+                            raise HTTPException(
+                                status_code=400,
+                                detail="Invalid annual fee format. Please use format like '₹500' or 'LTF'"
+                            )
     
     # Create audit log
     audit_log = AuditLog(

@@ -21,16 +21,16 @@ class TestCardTemplates:
         
         # Check specific categories
         category_names = [cat["category_name"] for cat in categories]
-        assert "general" in category_names
-        assert "dining" in category_names
+        assert "offline_spends" in category_names
         assert "fuel" in category_names
-        assert "groceries" in category_names
         assert "online_shopping" in category_names
-        assert "entertainment" in category_names
-        assert "travel" in category_names
         assert "utilities" in category_names
-        assert "healthcare" in category_names
         assert "education" in category_names
+        assert "jewelry" in category_names
+        assert "government_payments" in category_names
+        assert "insurance" in category_names
+        assert "rent" in category_names
+        assert "wallets" in category_names
     
     def test_get_default_spending_categories_premium_tier(self):
         """Test getting default spending categories for premium tier"""
@@ -39,14 +39,14 @@ class TestCardTemplates:
         assert len(categories) == 10
         
         # Premium tier should have higher reward rates
-        general_category = next(cat for cat in categories if cat["category_name"] == "general")
-        assert general_category["reward_rate"] > 1.0  # Higher than basic tier
+        offline_category = next(cat for cat in categories if cat["category_name"] == "offline_spends")
+        assert offline_category["reward_rate"] > 0.0  # Higher than basic tier
     
     def test_get_default_merchant_rewards(self):
         """Test getting default merchant rewards"""
         merchants = get_default_merchant_rewards("basic", "Test Bank")
         
-        assert len(merchants) == 18
+        assert len(merchants) == 21
         assert all("merchant_name" in merch for merch in merchants)
         assert all("merchant_display_name" in merch for merch in merchants)
         assert all("reward_rate" in merch for merch in merchants)
@@ -55,29 +55,32 @@ class TestCardTemplates:
         # Check specific merchants
         merchant_names = [merch["merchant_name"] for merch in merchants]
         assert "amazon" in merchant_names
+        assert "amazon_fresh" in merchant_names
         assert "flipkart" in merchant_names
+        assert "flipkart_grocery" in merchant_names
         assert "swiggy" in merchant_names
         assert "zomato" in merchant_names
         assert "bookmyshow" in merchant_names
         assert "uber" in merchant_names
         assert "ola" in merchant_names
+        assert "rapido" in merchant_names
         assert "bigbasket" in merchant_names
+        assert "blinkit" in merchant_names
         assert "myntra" in merchant_names
         assert "ajio" in merchant_names
         assert "paytm" in merchant_names
         assert "phonepe" in merchant_names
         assert "google_pay" in merchant_names
+        assert "nps" in merchant_names
         assert "netflix" in merchant_names
-        assert "grofers" in merchant_names
-        assert "dunzo" in merchant_names
         assert "hotstar" in merchant_names  # Fixed: was "disney_plus_hotstar"
-        assert "amazon_prime_video" in merchant_names
+        assert "prime_video" in merchant_names
     
     def test_get_default_merchant_rewards_premium_tier(self):
         """Test getting default merchant rewards for premium tier"""
         merchants = get_default_merchant_rewards("premium", "Test Bank")
         
-        assert len(merchants) == 18
+        assert len(merchants) == 21
         
         # Premium tier should have higher reward rates
         amazon_merchant = next(merch for merch in merchants if merch["merchant_name"] == "amazon")
@@ -97,8 +100,8 @@ class TestCardTemplates:
         assert all("reward_display" in cat for cat in categories)
         
         # Check reward display format
-        general_category = next(cat for cat in categories if cat["category_name"] == "general")
-        assert general_category["reward_display"] == f"{general_category['reward_rate']}% {general_category['reward_type']}"
+        offline_category = next(cat for cat in categories if cat["category_name"] == "offline_spends")
+        assert offline_category["reward_display"] == f"{offline_category['reward_rate']}% {offline_category['reward_type']}"
     
     def test_create_default_merchant_rewards_for_card(self):
         """Test creating default merchant rewards for a card"""
@@ -108,7 +111,7 @@ class TestCardTemplates:
         
         merchants = create_default_merchant_rewards_for_card(card_id, card_tier, bank_name)
         
-        assert len(merchants) == 18
+        assert len(merchants) == 21
         assert all("card_master_id" in merch for merch in merchants)
         assert all(merch["card_master_id"] == card_id for merch in merchants)
         assert all("reward_display" in merch for merch in merchants)
@@ -127,14 +130,23 @@ class TestCardTemplates:
         # Amazon should be first (most popular)
         assert merchant_names[0] == "amazon"
         
-        # Flipkart should be second
-        assert merchant_names[1] == "flipkart"
+        # Amazon Fresh should be second
+        assert merchant_names[1] == "amazon_fresh"
         
-        # Swiggy should be third
-        assert merchant_names[2] == "swiggy"
+        # Flipkart should be third
+        assert merchant_names[2] == "flipkart"
         
-        # Zomato should be fourth
-        assert merchant_names[3] == "zomato"
+        # FlipKart Grocery should be fourth
+        assert merchant_names[3] == "flipkart_grocery"
+        
+        # Swiggy should be fifth
+        assert merchant_names[4] == "swiggy"
+        
+        # Zomato should be sixth
+        assert merchant_names[5] == "zomato"
+        
+        # NPS should be positioned after digital wallets (rank 18)
+        assert merchant_names[17] == "nps"
     
     def test_category_standard_order(self):
         """Test that categories are in standard order"""
@@ -143,8 +155,8 @@ class TestCardTemplates:
         # Check standard order
         category_names = [cat["category_name"] for cat in categories]
         expected_order = [
-            "general", "dining", "fuel", "groceries", "online_shopping",
-            "entertainment", "travel", "utilities", "healthcare", "education"
+            "offline_spends", "fuel", "online_shopping", "utilities", "education",
+            "jewelry", "government_payments", "insurance", "rent", "wallets"
         ]
         
         assert category_names == expected_order

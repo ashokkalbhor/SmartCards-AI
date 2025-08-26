@@ -97,7 +97,7 @@ const CardDetailPage: React.FC = () => {
   // Edit suggestion modal state
   const [showEditSuggestionModal, setShowEditSuggestionModal] = useState(false);
   const [editSuggestionData, setEditSuggestionData] = useState<{
-    fieldType: 'spending_category' | 'merchant_reward' | 'spending_category_cap' | 'merchant_reward_cap' | 'basic_info';
+    fieldType: 'spending_category' | 'merchant_reward' | 'spending_category_cap' | 'merchant_reward_cap';
     fieldName: string;
     currentValue: string;
   } | null>(null);
@@ -221,7 +221,7 @@ const CardDetailPage: React.FC = () => {
     }
   };
 
-  const handleEditSuggestion = (fieldType: 'spending_category' | 'merchant_reward' | 'spending_category_cap' | 'merchant_reward_cap' | 'basic_info', fieldName: string, currentValue: string) => {
+  const handleEditSuggestion = (fieldType: 'spending_category' | 'merchant_reward' | 'spending_category_cap' | 'merchant_reward_cap', fieldName: string, currentValue: string) => {
     setEditSuggestionData({
       fieldType,
       fieldName,
@@ -321,7 +321,7 @@ const CardDetailPage: React.FC = () => {
             <div className="p-6">
               {/* Basic Card Information */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg group">
+                <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
                   <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Basic Information</h3>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
@@ -338,23 +338,11 @@ const CardDetailPage: React.FC = () => {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600 dark:text-gray-400">Joining Fee:</span>
-                      <button
-                        onClick={() => handleEditSuggestion('basic_info', 'joining_fee', cardData.joining_fee_display)}
-                        className="font-medium text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 transition-colors cursor-pointer flex items-center group/button"
-                      >
-                        {cardData.joining_fee_display}
-                        <Edit3 className="w-3 h-3 ml-1 opacity-0 group-hover/button:opacity-100" />
-                      </button>
+                      <span className="font-medium text-gray-900 dark:text-white">{cardData.joining_fee_display}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600 dark:text-gray-400">Annual Fee:</span>
-                      <button
-                        onClick={() => handleEditSuggestion('basic_info', 'annual_fee', cardData.annual_fee_display)}
-                        className="font-medium text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 transition-colors cursor-pointer flex items-center group/button"
-                      >
-                        {cardData.annual_fee_display}
-                        <Edit3 className="w-3 h-3 ml-1 opacity-0 group-hover/button:opacity-100" />
-                      </button>
+                      <span className="font-medium text-gray-900 dark:text-white">{cardData.annual_fee_display}</span>
                     </div>
                   </div>
                 </div>
@@ -386,57 +374,6 @@ const CardDetailPage: React.FC = () => {
                           />
                         ))}
                       </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Official Documents</h3>
-                  <div className="space-y-2 text-sm">
-                    {documentsLoading ? (
-                      <div className="text-center py-4">
-                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600 mx-auto"></div>
-                        <p className="text-gray-500 dark:text-gray-400 text-xs mt-2">Loading documents...</p>
-                      </div>
-                    ) : approvedDocuments.length > 0 ? (
-                      <div className="space-y-2">
-                        <div className="flex overflow-x-auto space-x-2 pb-2">
-                          {approvedDocuments.slice(0, 3).map((doc) => (
-                            <div key={doc.id} className="flex items-center justify-between bg-white dark:bg-gray-600 rounded px-2 py-1 min-w-0 flex-shrink-0">
-                              <span className="text-gray-600 dark:text-gray-400 text-xs truncate mr-2">
-                                {doc.document_name}
-                              </span>
-                              <button
-                                onClick={() => handleDownloadDocument(doc.id)}
-                                className="text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 flex-shrink-0"
-                              >
-                                <Download className="w-3 h-3" />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                        {approvedDocuments.length > 3 && (
-                          <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
-                            +{approvedDocuments.length - 3} more documents
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="text-center py-4">
-                        <FileText className="w-6 h-6 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
-                        <p className="text-gray-500 dark:text-gray-400 text-xs">No documents available</p>
-                      </div>
-                    )}
-                    
-                    {/* Upload Button */}
-                    <div className="mt-3 pt-2 border-t border-gray-200 dark:border-gray-600">
-                      <button
-                        onClick={() => setShowDocumentModal(true)}
-                        className="w-full px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white text-xs rounded transition-colors flex items-center justify-center"
-                      >
-                        <Upload className="w-3 h-3 mr-1" />
-                        Upload Document
-                      </button>
                     </div>
                   </div>
                 </div>
@@ -580,6 +517,35 @@ const CardDetailPage: React.FC = () => {
                    </div>
                  )}
                </div>
+            </div>
+          </div>
+
+          {/* Section 3: Additional Features */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center">
+                <FileText className="w-5 h-5 mr-2" />
+                Additional Features
+              </h2>
+            </div>
+            
+            <div className="p-6">
+              <div className="space-y-2 text-sm">
+                {cardData.additional_features && typeof cardData.additional_features === 'object' ? (
+                  Object.entries(cardData.additional_features).map(([key, value]) => (
+                    <div key={key} className="flex justify-between">
+                      <span className="text-gray-600 dark:text-gray-400 capitalize">
+                        {key.replace(/_/g, ' ')}:
+                      </span>
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        {String(value)}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-gray-500 dark:text-gray-400">No additional features listed</p>
+                )}
+              </div>
             </div>
           </div>
 

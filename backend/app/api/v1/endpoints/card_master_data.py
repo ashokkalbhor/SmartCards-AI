@@ -1,5 +1,7 @@
 from typing import List, Optional
 from app.core.card_templates import create_default_spending_categories_for_card, create_default_merchant_rewards_for_card
+from app.core.config import settings
+from app.core.merchant_popularity import merchant_popularity_service
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import and_, or_
@@ -160,7 +162,7 @@ def get_card_master_data_by_id(card_id: int, db: Session = Depends(get_db)):
                     "merchant_display_name": existing_merchant.merchant_display_name,
                     "merchant_category": existing_merchant.merchant_category,
                     "reward_rate": existing_merchant.reward_rate,
-                    "reward_type": existing_merchant.reward_type,
+                    "reward_type": existing_merchant.reward_type or "cashback",
                     "reward_cap": existing_merchant.reward_cap,
                     "reward_cap_period": existing_merchant.reward_cap_period,
                     "minimum_transaction_amount": existing_merchant.minimum_transaction_amount,
@@ -546,20 +548,103 @@ def get_card_comparison_data(
     for card in cards:
         print(f"  - {card.bank_name} {card.card_name}")
     
+    # Calculate popularity scores for categories and merchants
+    category_popularity = {}
+    merchant_popularity = {}
+    
+    # Collect all categories and merchants with their reward rates
+    for card in cards:
+        for category in card.spending_categories:
+            if category.is_active:
+                category_name = category.category_name
+                if category_name not in category_popularity:
+                    category_popularity[category_name] = {
+                        'total_cards': 0,
+                        'total_reward_rate': 0,
+                        'max_reward_rate': 0
+                    }
+                category_popularity[category_name]['total_cards'] += 1
+                category_popularity[category_name]['total_reward_rate'] += category.reward_rate
+                category_popularity[category_name]['max_reward_rate'] = max(
+                    category_popularity[category_name]['max_reward_rate'], 
+                    category.reward_rate
+                )
+        
+        for merchant in card.merchant_rewards:
+            if merchant.is_active:
+                merchant_name = merchant.merchant_name
+                if merchant_name not in merchant_popularity:
+                    merchant_popularity[merchant_name] = {
+                        'total_cards': 0,
+                        'total_reward_rate': 0,
+                        'max_reward_rate': 0
+                    }
+                merchant_popularity[merchant_name]['total_cards'] += 1
+                merchant_popularity[merchant_name]['total_reward_rate'] += merchant.reward_rate
+                merchant_popularity[merchant_name]['max_reward_rate'] = max(
+                    merchant_popularity[merchant_name]['max_reward_rate'], 
+                    merchant.reward_rate
+                )
+    
+    # Calculate enhanced popularity scores using market research data
+    def calculate_enhanced_popularity_score(merchant_name, stats):
+        """Calculate enhanced popularity score combining market data with card coverage"""
+        avg_reward_rate = stats['total_reward_rate'] / stats['total_cards'] if stats['total_cards'] > 0 else 0
+        coverage_percent = stats['total_cards'] / len(cards)  # Percentage of cards offering this
+        
+        # Use market research-based popularity service
+        enhanced_score = merchant_popularity_service.calculate_enhanced_popularity_score(
+            merchant_name=merchant_name,
+            card_coverage_percent=coverage_percent,
+            avg_reward_rate=avg_reward_rate
+        )
+        
+        return enhanced_score
+    
+    # Sort categories by traditional method (still useful for spending categories)
+    def calculate_category_popularity_score(stats):
+        avg_reward_rate = stats['total_reward_rate'] / stats['total_cards'] if stats['total_cards'] > 0 else 0
+        coverage_score = stats['total_cards'] / len(cards)  # Percentage of cards offering this
+        reward_score = avg_reward_rate / 10  # Normalize reward rate (assuming max ~10%)
+        max_reward_bonus = stats['max_reward_rate'] / 20  # Bonus for having high max rates
+        
+        return (coverage_score * settings.POPULARITY_COVERAGE_WEIGHT + 
+                reward_score * settings.POPULARITY_REWARD_WEIGHT + 
+                max_reward_bonus * settings.POPULARITY_MAX_REWARD_WEIGHT)
+    
+    # Sort categories by traditional method
+    sorted_categories = sorted(
+        category_popularity.keys(),
+        key=lambda x: calculate_category_popularity_score(category_popularity[x]),
+        reverse=True
+    )
+    
+    # Sort merchants by enhanced market research-based popularity
+    sorted_merchants = sorted(
+        merchant_popularity.keys(),
+        key=lambda x: calculate_enhanced_popularity_score(x, merchant_popularity[x]),
+        reverse=True
+    )
+    
+    # Limit merchants to top N for better usability
+    top_merchants = sorted_merchants[:settings.TOP_MERCHANTS_LIMIT]
+    
     # Format data for comparison page
     comparison_data = []
     for card in cards:
-        # Build categories dict
+        # Build categories dict (sorted by popularity)
         categories = {}
-        for category in card.spending_categories:
-            if category.is_active:
-                categories[category.category_name] = category.reward_display
+        for category_name in sorted_categories:
+            category = next((c for c in card.spending_categories if c.category_name == category_name and c.is_active), None)
+            if category:
+                categories[category_name] = category.reward_display
         
-        # Build merchants dict
+        # Build merchants dict (only top N popular merchants)
         merchants = {}
-        for merchant in card.merchant_rewards:
-            if merchant.is_active:
-                merchants[merchant.merchant_name] = merchant.reward_display
+        for merchant_name in top_merchants:
+            merchant = next((m for m in card.merchant_rewards if m.merchant_name == merchant_name and m.is_active), None)
+            if merchant:
+                merchants[merchant_name] = merchant.reward_display
         
         # Build additional info
         additional_info_parts = []

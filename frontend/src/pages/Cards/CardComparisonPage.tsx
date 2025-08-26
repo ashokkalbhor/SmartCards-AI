@@ -106,11 +106,11 @@ const CardComparisonPage: React.FC = () => {
   // Get all unique categories and merchants for the table headers
   const allCategories = Array.from(
     new Set(cardData.flatMap(card => Object.keys(card.categories)))
-  ).sort();
+  );
   
   const allMerchants = Array.from(
     new Set(cardData.flatMap(card => Object.keys(card.merchants)))
-  ).sort();
+  );
 
   // Filter cards based on search term and category
   const filteredCards = cardData.filter(card => {
@@ -144,6 +144,8 @@ const CardComparisonPage: React.FC = () => {
     return '';
   };
 
+
+
   // Export table as image with branding
   const handleExport = async () => {
     if (!exportRef.current) return;
@@ -156,6 +158,8 @@ const CardComparisonPage: React.FC = () => {
         exportButton.innerHTML = '<Loader2 className="w-4 h-4 animate-spin" /> Generating...';
         exportButton.disabled = true;
       }
+
+
 
       // Get user information from useAuth hook
       const getUserDisplayName = () => {
@@ -204,13 +208,328 @@ const CardComparisonPage: React.FC = () => {
       tempContainer.style.position = 'absolute';
       tempContainer.style.left = '-9999px';
       tempContainer.style.top = '0';
-      tempContainer.style.width = '1200px'; // Fixed width for consistent export
+      tempContainer.style.width = '1800px'; // Increased width to accommodate more cards
       tempContainer.style.backgroundColor = 'white';
       tempContainer.style.padding = '20px';
       tempContainer.style.fontFamily = 'Inter, system-ui, sans-serif';
       
       // Clone the table content
       const tableClone = exportRef.current.cloneNode(true) as HTMLElement;
+      
+      // Trim card names for image export (remove common words)
+      const trimCardName = (cardName: string) => {
+        return cardName
+          .replace(/\b(Bank|Premium|Co-branded|Co-brand|Standard|Infinity|Elite|Platinum|Gold|Silver|Titanium|Signature|World|Select|Regalia|Magnus|Rewards|Cashback|Miles|Points|Smart|Plus|Pro|Ultra|Max|Prime|Infinite|Unlimited|Freedom|Liberty|Choice|Optimal|Best|Super|Mega|Grand|Royal|Imperial|Supreme|Ultimate|Exclusive|Premium|Deluxe|Luxury|Elite|Platinum|Gold|Silver|Bronze|Classic|Basic|Entry|Starter|Student|Youth|Senior|Women|Men|Family|Business|Corporate|Travel|Shopping|Dining|Fuel|Grocery|Entertainment|Lifestyle|Sports|Fitness|Health|Medical|Education|Technology|Digital|Online|Offline|Contactless|Chip|Magnetic|Virtual|Physical|Metal|Plastic|Carbon|Wood|Bamboo|Eco|Green|Sustainable|Organic|Natural|Pure|Simple|Easy|Quick|Fast|Instant|Immediate|Direct|Straight|Clear|Transparent|Honest|Fair|Just|Right|Good|Better|Best|Perfect|Ideal|Optimal|Optimum|Maximum|Minimum|Average|Normal|Regular|Standard|Basic|Simple|Easy|Convenient|Comfortable|Reliable|Secure|Safe|Protected|Guarded|Shielded|Covered|Insured|Guaranteed|Warranted|Assured|Confirmed|Verified|Validated|Authenticated|Certified|Approved|Authorized|Licensed|Registered|Official|Formal|Professional|Expert|Specialist|Master|Guru|Wizard|Genius|Brilliant|Smart|Intelligent|Clever|Wise|Sage|Scholar|Academic|Theoretical|Practical|Applied|Real|Actual|True|Genuine|Authentic|Original|Natural|Pure|Clean|Fresh|New|Modern|Contemporary|Current|Latest|Recent|Updated|Upgraded|Enhanced|Improved|Better|Superior|Excellent|Outstanding|Exceptional|Extraordinary|Amazing|Wonderful|Fantastic|Fabulous|Terrific|Great|Good|Nice|Fine|Okay|Alright|Acceptable|Satisfactory|Adequate|Sufficient|Enough|Plenty|Abundant|Rich|Wealthy|Prosperous|Successful|Thriving|Flourishing|Growing|Expanding|Developing|Progressing|Advancing|Moving|Going|Running|Working|Operating|Functioning|Performing|Acting|Doing|Making|Creating|Building|Constructing|Developing|Designing|Planning|Organizing|Managing|Controlling|Directing|Leading|Guiding|Helping|Supporting|Assisting|Aiding|Serving|Providing|Offering|Giving|Sharing|Contributing|Adding|Including|Involving|Engaging|Connecting|Linking|Joining|Combining|Merging|Integrating|Unifying|Uniting|Bringing|Taking|Getting|Receiving|Accepting|Welcoming|Embracing|Adopting|Following|Pursuing|Chasing|Seeking|Looking|Finding|Discovering|Exploring|Investigating|Researching|Studying|Learning|Understanding|Knowing|Realizing|Recognizing|Identifying|Naming|Calling|Referring|Mentioning|Discussing|Talking|Speaking|Communicating|Expressing|Showing|Displaying|Presenting|Demonstrating|Illustrating|Explaining|Describing|Defining|Clarifying|Simplifying|Making|Creating|Building|Developing|Designing|Planning|Organizing|Managing|Controlling|Directing|Leading|Guiding|Helping|Supporting|Assisting|Aiding|Serving|Providing|Offering|Giving|Sharing|Contributing|Adding|Including|Involving|Engaging|Connecting|Linking|Joining|Combining|Merging|Integrating|Unifying|Uniting|Bringing|Taking|Getting|Receiving|Accepting|Welcoming|Embracing|Adopting|Following|Pursuing|Chasing|Seeking|Looking|Finding|Discovering|Exploring|Investigating|Researching|Studying|Learning|Understanding|Knowing|Realizing|Recognizing|Identifying|Naming|Calling|Referring|Mentioning|Discussing|Talking|Speaking|Communicating|Expressing|Showing|Displaying|Presenting|Demonstrating|Illustrating|Explaining|Describing|Defining|Clarifying|Simplifying)\b/gi, '')
+          .replace(/\s+/g, ' ')
+          .trim();
+      };
+      
+      // Apply card name trimming to the cloned table
+      const cardNameElements = tableClone.querySelectorAll('th div:first-child');
+      cardNameElements.forEach((element) => {
+        if (element.textContent) {
+          element.textContent = trimCardName(element.textContent);
+        }
+      });
+      
+      // Set fixed column widths for better layout
+      const table = tableClone.querySelector('table') as HTMLElement;
+      if (table) {
+        table.style.width = '100%';
+        table.style.tableLayout = 'fixed';
+        
+        // Set column widths
+        const firstColumn = table.querySelector('th:first-child, td:first-child') as HTMLElement;
+        if (firstColumn) {
+          firstColumn.style.width = '200px';
+          firstColumn.style.minWidth = '200px';
+        }
+        
+        // Set other columns to equal width - dynamic approach
+        const otherColumns = table.querySelectorAll('th:not(:first-child), td:not(:first-child)');
+        const availableWidth = 1800 - 200 - 40; // Total width - first column - padding
+        const cardCount = filteredCards.length;
+        const columnWidth = cardCount > 0 ? `${availableWidth / cardCount}px` : '150px';
+        
+        console.log('Column width calculation:', {
+          availableWidth,
+          cardCount,
+          columnWidth
+        });
+        
+        otherColumns.forEach((col) => {
+          const colElement = col as HTMLElement;
+          colElement.style.width = columnWidth;
+          colElement.style.minWidth = columnWidth;
+          colElement.style.maxWidth = columnWidth;
+        });
+        
+        // Apply table styling for better readability in image export
+        table.style.borderCollapse = 'collapse';
+        table.style.border = '1px solid #e0e0e0';
+        
+        // Style all cells with borders and padding
+        const allCells = table.querySelectorAll('th, td');
+        allCells.forEach((cell) => {
+          const cellElement = cell as HTMLElement;
+          cellElement.style.border = '1px solid #e0e0e0';
+          cellElement.style.padding = '8px';
+          cellElement.style.textAlign = 'center';
+          cellElement.style.fontSize = '11px';
+          cellElement.style.fontFamily = 'Inter, system-ui, sans-serif';
+          cellElement.style.color = '#333333'; // Ensure dark text for visibility
+        });
+        
+        // Style first column (Card Details) with light blue background
+        const firstColumnCells = table.querySelectorAll('th:first-child, td:first-child');
+        firstColumnCells.forEach((cell) => {
+          const cellElement = cell as HTMLElement;
+          cellElement.style.backgroundColor = '#e3f2fd';
+          cellElement.style.fontWeight = 'bold';
+          cellElement.style.textAlign = 'left';
+          cellElement.style.color = '#333333'; // Ensure dark text on light blue background
+        });
+        
+        // Style header row with dark blue background
+        const headerRow = table.querySelector('thead tr');
+        if (headerRow) {
+          const headerCells = headerRow.querySelectorAll('th');
+          headerCells.forEach((cell) => {
+            const cellElement = cell as HTMLElement;
+            cellElement.style.backgroundColor = '#1976d2';
+            cellElement.style.color = 'white';
+            cellElement.style.fontWeight = 'bold';
+            cellElement.style.fontSize = '12px';
+          });
+        }
+        
+        // Style section headers (Spending Categories, Merchant Rewards) with light yellow background
+        const sectionHeaders = table.querySelectorAll('td');
+        sectionHeaders.forEach((cell) => {
+          const cellElement = cell as HTMLElement;
+          if (cellElement.textContent && (
+            cellElement.textContent.includes('Spending Categories') ||
+            cellElement.textContent.includes('Merchant Rewards') ||
+            cellElement.textContent.includes('Card Details') ||
+            cellElement.textContent.includes('Additional Info')
+          )) {
+            cellElement.style.backgroundColor = '#fff8e1';
+            cellElement.style.fontWeight = 'bold';
+            cellElement.style.fontSize = '12px';
+            cellElement.style.color = '#333333'; // Ensure dark text on light yellow background
+          }
+        });
+
+
+        
+
+        
+        // Apply alternating row colors for better readability
+        const dataRows = table.querySelectorAll('tbody tr');
+        dataRows.forEach((row, index) => {
+          const rowElement = row as HTMLElement;
+          const cells = rowElement.querySelectorAll('td');
+          
+          // Skip section header rows (they already have yellow background)
+          const firstCell = cells[0];
+          if (firstCell && (
+            firstCell.textContent?.includes('Spending Categories') ||
+            firstCell.textContent?.includes('Merchant Rewards') ||
+            firstCell.textContent?.includes('Card Details') ||
+            firstCell.textContent?.includes('Additional Info')
+          )) {
+            return; // Skip this row
+          }
+          
+          // Apply alternating colors to data rows
+          cells.forEach((cell) => {
+            const cellElement = cell as HTMLElement;
+            if (index % 2 === 0) {
+              cellElement.style.backgroundColor = '#ffffff';
+            } else {
+              cellElement.style.backgroundColor = '#f8f9fa';
+            }
+            cellElement.style.color = '#333333'; // Ensure dark text on both white and gray backgrounds
+          });
+        });
+        
+        // Highlight highest values in each row with green background
+        const highlightRows = table.querySelectorAll('tbody tr');
+        highlightRows.forEach((row) => {
+          const rowElement = row as HTMLElement;
+          const cells = rowElement.querySelectorAll('td');
+          
+          // Skip section header rows and first column
+          const firstCell = cells[0];
+          if (firstCell && (
+            firstCell.textContent?.includes('Spending Categories') ||
+            firstCell.textContent?.includes('Merchant Rewards') ||
+            firstCell.textContent?.includes('Card Details') ||
+            firstCell.textContent?.includes('Additional Info')
+          )) {
+            return; // Skip this row
+          }
+          
+          // Get all numeric values from the row (excluding first column)
+          const numericValues: { value: number; cell: HTMLElement }[] = [];
+          for (let i = 1; i < cells.length; i++) {
+            const cell = cells[i] as HTMLElement;
+            const text = cell.textContent?.trim() || '';
+            
+            // Extract percentage values (e.g., "5.0%", "10%", "1.5%")
+            const percentageMatch = text.match(/(\d+(?:\.\d+)?)%/);
+            if (percentageMatch) {
+              const value = parseFloat(percentageMatch[1]);
+              if (value > 0) { // Only consider positive values
+                numericValues.push({ value, cell });
+              }
+            }
+          }
+          
+          // Find the highest value(s)
+          if (numericValues.length > 0) {
+            const maxValue = Math.max(...numericValues.map(item => item.value));
+            
+            // Highlight all cells with the highest value
+            numericValues.forEach(({ value, cell }) => {
+              if (value === maxValue) {
+                cell.style.backgroundColor = '#e8f5e8'; // Light green background
+                cell.style.fontWeight = 'bold';
+                cell.style.color = '#2e7d32'; // Dark green text
+              }
+            });
+          }
+        });
+        
+        // DEBUG: Log table structure
+        console.log('=== EXPORT DEBUG ===');
+        console.log('Total rows found:', table.querySelectorAll('tbody tr').length);
+        
+        // Special handling for Additional Info row - ensure all cells in that row have proper text color
+        // This runs AFTER all other styling to override any previous font size settings
+        const additionalInfoRows = table.querySelectorAll('tbody tr');
+        console.log('Processing', additionalInfoRows.length, 'rows for Additional Info styling');
+        
+        additionalInfoRows.forEach((row, rowIndex) => {
+          const rowElement = row as HTMLElement;
+          const cells = rowElement.querySelectorAll('td');
+          
+          // Check if this is the Additional Info row - more robust detection
+          const firstCell = cells[0];
+          const isAdditionalInfoRow = firstCell && (
+            firstCell.textContent?.includes('Additional Info') ||
+            firstCell.textContent?.includes('additional_info') ||
+            firstCell.textContent?.toLowerCase().includes('additional')
+          );
+          
+          if (isAdditionalInfoRow) {
+            console.log(`Found Additional Info row at index ${rowIndex}`);
+            console.log('First cell text:', firstCell.textContent);
+            console.log('Number of cells in this row:', cells.length);
+            
+            // Style all cells in the Additional Info row for better visibility
+            cells.forEach((cell, cellIndex) => {
+              const cellElement = cell as HTMLElement;
+              const textLength = cellElement.textContent?.length || 0;
+              
+              console.log(`Cell ${cellIndex} text length:`, textLength);
+              console.log(`Cell ${cellIndex} text:`, cellElement.textContent);
+              
+              // Dynamic font sizing based on text length
+              let fontSize = '12px'; // Default size
+              if (textLength > 80) {
+                fontSize = '10px'; // Very long text
+              } else if (textLength > 50) {
+                fontSize = '11px'; // Long text
+              } else if (textLength > 30) {
+                fontSize = '12px'; // Medium text
+              } else {
+                fontSize = '13px'; // Short text
+              }
+              
+              console.log(`Cell ${cellIndex} font size set to:`, fontSize);
+              
+              cellElement.style.color = '#000000'; // Force dark text for visibility
+              cellElement.style.fontSize = fontSize; // Dynamic font size
+              cellElement.style.textAlign = 'left'; // Left align for better readability
+              cellElement.style.fontWeight = 'normal'; // Normal weight for content
+              cellElement.style.backgroundColor = '#fff8e1'; // Keep light yellow background
+              
+              console.log(`Cell ${cellIndex} styles applied:`, {
+                color: cellElement.style.color,
+                fontSize: cellElement.style.fontSize,
+                backgroundColor: cellElement.style.backgroundColor
+              });
+            });
+          }
+        });
+        
+        console.log('=== END EXPORT DEBUG ===');
+        
+        // Fallback: If Additional Info row not found by name, look for rows with long text content
+        let additionalInfoRowFound = false;
+        additionalInfoRows.forEach((row, rowIndex) => {
+          const rowElement = row as HTMLElement;
+          const cells = rowElement.querySelectorAll('td');
+          const firstCell = cells[0];
+          
+          if (firstCell && firstCell.textContent?.includes('Additional Info')) {
+            additionalInfoRowFound = true;
+          }
+        });
+        
+        if (!additionalInfoRowFound) {
+          console.log('Additional Info row not found by name, looking for rows with long text...');
+          
+          additionalInfoRows.forEach((row, rowIndex) => {
+            const rowElement = row as HTMLElement;
+            const cells = rowElement.querySelectorAll('td');
+            
+            // Check if any cell in this row has long text (typical of Additional Info)
+            let hasLongText = false;
+            cells.forEach((cell) => {
+              const cellElement = cell as HTMLElement;
+              const textLength = cellElement.textContent?.length || 0;
+              if (textLength > 50) { // Long text threshold
+                hasLongText = true;
+              }
+            });
+            
+            if (hasLongText) {
+              console.log(`Found row ${rowIndex} with long text, applying Additional Info styling`);
+              
+              cells.forEach((cell, cellIndex) => {
+                const cellElement = cell as HTMLElement;
+                const textLength = cellElement.textContent?.length || 0;
+                
+                // Dynamic font sizing based on text length
+                let fontSize = '12px';
+                if (textLength > 80) {
+                  fontSize = '10px';
+                } else if (textLength > 50) {
+                  fontSize = '11px';
+                } else if (textLength > 30) {
+                  fontSize = '12px';
+                } else {
+                  fontSize = '13px';
+                }
+                
+                cellElement.style.color = '#000000';
+                cellElement.style.fontSize = fontSize;
+                cellElement.style.textAlign = 'left';
+                cellElement.style.fontWeight = 'normal';
+                cellElement.style.backgroundColor = '#fff8e1';
+                
+                console.log(`Fallback styling applied to cell ${cellIndex}:`, {
+                  textLength,
+                  fontSize,
+                  text: cellElement.textContent?.substring(0, 50) + '...'
+                });
+              });
+            }
+          });
+        }
+      }
       
       // Add branding header with personalized user info
       const brandingHeader = document.createElement('div');
@@ -257,6 +576,8 @@ const CardComparisonPage: React.FC = () => {
       brandingHeader.appendChild(brandSection);
       brandingHeader.appendChild(userSection);
       
+
+      
       // Add branding footer
       const brandingFooter = document.createElement('div');
       brandingFooter.style.cssText = `
@@ -267,8 +588,15 @@ const CardComparisonPage: React.FC = () => {
         font-family: 'Inter', system-ui, sans-serif;
       `;
       brandingFooter.innerHTML = `
-                    <div>© 2025 UNGI SmartCards AI. Every swipe, Optimized.</div>
-        <div style="font-size: 11px; color: #9ca3af; margin-top: 4px;">Visit us at UNGI SmartCards AI for personalized credit card recommendations</div>
+        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+          <div style="font-size: 12px; color: #6b7280;">© 2025 UNGI SmartCards AI. Every swipe, Optimized.</div>
+          <div style="font-size: 11px; color: #9ca3af;">
+            For personalized credit card recommendations and detailed capping information, visit: 
+            <span style="color: #2563eb; font-weight: bold; text-decoration: underline; margin-left: 4px;">
+              https://smartcards-ai-frontend.onrender.com/
+            </span>
+          </div>
+        </div>
       `;
       
       // Assemble the export content
@@ -547,13 +875,16 @@ const CardComparisonPage: React.FC = () => {
                     <>
                       <tr className="bg-green-50 dark:bg-green-900/20">
                         <td className="p-2 sm:p-3 font-semibold sticky left-0 bg-green-50 dark:bg-green-900/20 border-r border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white text-xs sm:text-sm z-10" colSpan={filteredCards.length + 1}>
-                        Merchant Rewards
+                        Merchant Rewards (Top 10 Popular)
                       </td>
                       </tr>
-                      {allMerchants.map((merchant) => (
-                        <tr key={merchant} className="border-b border-gray-200 dark:border-gray-700">
+                      {allMerchants.map((merchant, index) => (
+                        <tr key={merchant} className={`border-b border-gray-200 dark:border-gray-700 ${index < 3 ? 'bg-green-25 dark:bg-green-900/10' : ''}`}>
                           <td className="p-2 sm:p-3 font-medium sticky left-0 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white text-xs sm:text-sm z-10">
-                            {merchant.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                            <div className="flex items-center">
+                              {index < 3 && <span className="text-yellow-500 mr-1">⭐</span>}
+                              {merchant.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                            </div>
                           </td>
                           {filteredCards.map((card) => {
                             const rowValues = filteredCards.map(c => c.merchants[merchant] || '-');
@@ -586,7 +917,7 @@ const CardComparisonPage: React.FC = () => {
                 © 2025 UNGI SmartCards AI. Every swipe, Optimized.
               </div>
               <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                Visit us at UNGI SmartCards AI for personalized credit card recommendations
+                For personalized credit card recommendations and detailed capping information, visit: https://smartcards-ai-frontend.onrender.com/
               </div>
             </div>
           </div>

@@ -130,10 +130,10 @@ def submit_edit_suggestion(
         raise HTTPException(status_code=404, detail="Card not found")
     
     # Validate field type
-    if suggestion_data.field_type not in ["spending_category", "merchant_reward", "spending_category_cap", "merchant_reward_cap"]:
+    if suggestion_data.field_type not in ["spending_category", "merchant_reward", "spending_category_cap", "merchant_reward_cap", "basic_info"]:
         raise HTTPException(
             status_code=400,
-            detail="Invalid field type. Must be 'spending_category', 'merchant_reward', 'spending_category_cap', or 'merchant_reward_cap'"
+            detail="Invalid field type. Must be 'spending_category', 'merchant_reward', 'spending_category_cap', 'merchant_reward_cap', or 'basic_info'"
         )
     
     # Get current value for comparison
@@ -178,6 +178,14 @@ def submit_edit_suggestion(
         else:
             # For new merchants, set old_value to "0"
             old_value = "0"
+    elif suggestion_data.field_type == "basic_info":
+        # Handle basic information fields
+        if suggestion_data.field_name == "joining_fee":
+            old_value = card.joining_fee_display
+        elif suggestion_data.field_name == "annual_fee":
+            old_value = card.annual_fee_display
+        else:
+            old_value = "Not Available"
     
     # Check if suggestion already exists
     existing_suggestion = db.query(EditSuggestion).filter(
