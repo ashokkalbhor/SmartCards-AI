@@ -40,7 +40,7 @@ services:
     env: docker
     dockerfilePath: sql-agent-service/Dockerfile.render
     plan: free
-    buildCommand: docker build --build-arg CACHEBUST=$(date +%s) .
+    buildCommand: docker build --build-arg CACHEBUST=$(date +%s) -f sql-agent-service/Dockerfile.render sql-agent-service
     envVars:
       - key: OPENAI_API_KEY
         sync: false
