@@ -21,6 +21,7 @@ api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
 api_router.include_router(moderator.router, prefix="/moderator", tags=["moderator"])
 api_router.include_router(user_roles.router, prefix="/user-roles", tags=["user-roles"])
 api_router.include_router(card_documents.router, prefix="/card-documents", tags=["card-documents"])
+
 # Temporarily disabled AI endpoints
 # api_router.include_router(chatbot.router, prefix="/chatbot", tags=["chatbot"])
 # api_router.include_router(enhanced_chatbot.router, prefix="/enhanced-chatbot", tags=["enhanced-chatbot"]) 

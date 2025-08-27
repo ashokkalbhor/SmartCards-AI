@@ -1,0 +1,10 @@
+{
+    "venvPath": ".",
+    "venv": "sql-agent-env",
+    "pythonVersion": "3.9",
+    "pythonPlatform": "Darwin",
+    "extraPaths": [
+        "./sql-agent-env/lib/python3.9/site-packages"
+    ]
+}
+

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Send, Bot, User, Zap, Database, Clock, TrendingUp } from 'lucide-react';
-import api from '../../services/api';
+import { sqlAgentServiceAPI } from '../../services/api';
 
 interface EnhancedMessage {
   id: number;
@@ -10,21 +10,19 @@ interface EnhancedMessage {
   timestamp: Date;
   source?: string;
   confidence?: number;
-  apiCallsSaved?: number;
   processingTime?: number;
-  queryType?: string;
-  complexity?: string;
+  sqlQuery?: string;
+  explanation?: string;
 }
 
 interface ChatResponse {
   response: string;
-  conversation_id?: number;
-  source: string;
+  sql_query?: string;
+  results?: any;
+  explanation?: string;
   confidence: number;
-  api_calls_saved: number;
   processing_time: number;
-  query_type?: string;
-  complexity?: string;
+  source: string;
   metadata?: any;
 }
 
@@ -41,11 +39,9 @@ const EnhancedChatBot: React.FC = () => {
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [conversationId, setConversationId] = useState<number | null>(null);
   const [stats, setStats] = useState({
-    apiCallsSaved: 0,
     totalProcessingTime: 0,
-    cacheHits: 0
+    totalQueries: 0
   });
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -72,36 +68,42 @@ const EnhancedChatBot: React.FC = () => {
     setIsTyping(true);
 
     try {
-      const response = await api.post<ChatResponse>('/enhanced-chatbot/enhanced-chat', {
-        message: inputMessage,
-        conversation_id: conversationId,
-        use_cache: true
+      // Get basic user data from localStorage or use defaults
+      const userData = {
+        user_id: 1, // Default user ID
+        context: {
+          user_cards: [], // Will be populated by SQL agent from database
+          user_email: "user@example.com"
+        }
+      };
+
+      const response = await sqlAgentServiceAPI.processQuery({
+        query: inputMessage,
+        user_id: userData.user_id,
+        context: userData.context,
+        include_sql: true,
+        include_explanation: true,
+        max_results: 10
       });
 
       const botResponse: EnhancedMessage = {
         id: Date.now() + 1,
-        text: response.data.response,
+        text: response.response,
         isUser: false,
         timestamp: new Date(),
-        source: response.data.source,
-        confidence: response.data.confidence,
-        apiCallsSaved: response.data.api_calls_saved,
-        processingTime: response.data.processing_time,
-        queryType: response.data.query_type,
-        complexity: response.data.complexity
+        source: response.source,
+        confidence: response.confidence,
+        processingTime: response.processing_time,
+        sqlQuery: response.sql_query,
+        explanation: response.explanation
       };
 
       setMessages(prev => [...prev, botResponse]);
-      
-      if (response.data.conversation_id) {
-        setConversationId(response.data.conversation_id);
-      }
 
       // Update stats
       setStats(prev => ({
-        apiCallsSaved: prev.apiCallsSaved + response.data.api_calls_saved,
-        totalProcessingTime: prev.totalProcessingTime + response.data.processing_time,
-        cacheHits: prev.cacheHits + (response.data.source === 'cache' ? 1 : 0)
+        totalProcessingTime: prev.totalProcessingTime + response.processing_time,
+        totalQueries: prev.totalQueries + 1
       }));
 
     } catch (error) {
@@ -124,12 +126,12 @@ const EnhancedChatBot: React.FC = () => {
     switch (source) {
       case 'cache':
         return <Database className="h-3 w-3" />;
-      case 'pattern_matching':
-        return <Zap className="h-3 w-3" />;
-      case 'llm':
+      case 'sql_agent':
         return <Bot className="h-3 w-3" />;
       case 'welcome':
         return <Bot className="h-3 w-3" />;
+      case 'error':
+        return <Zap className="h-3 w-3" />;
       default:
         return <Bot className="h-3 w-3" />;
     }
@@ -139,12 +141,12 @@ const EnhancedChatBot: React.FC = () => {
     switch (source) {
       case 'cache':
         return 'text-green-600';
-      case 'pattern_matching':
-        return 'text-blue-600';
-      case 'llm':
+      case 'sql_agent':
         return 'text-purple-600';
       case 'welcome':
         return 'text-gray-600';
+      case 'error':
+        return 'text-red-600';
       default:
         return 'text-gray-600';
     }
@@ -154,14 +156,14 @@ const EnhancedChatBot: React.FC = () => {
     switch (source) {
       case 'cache':
         return 'Cached';
-      case 'pattern_matching':
-        return 'Fast';
-      case 'llm':
+      case 'sql_agent':
         return 'AI';
       case 'welcome':
         return 'Welcome';
+      case 'error':
+        return 'Error';
       default:
-        return 'Unknown';
+        return 'AI';
     }
   };
 
@@ -289,7 +291,7 @@ const EnhancedChatBot: React.FC = () => {
         <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
           <div className="flex items-center space-x-1">
             <TrendingUp className="h-3 w-3" />
-            <span>{stats.apiCallsSaved} saved</span>
+            <span>{stats.totalQueries} queries</span>
           </div>
           <div className="flex items-center space-x-1">
             <Clock className="h-3 w-3" />

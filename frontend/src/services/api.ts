@@ -573,4 +573,81 @@ export const cardDocumentsAPI = {
   },
 };
 
+// SQL Agent API - Direct calls to SQL Agent Service
+const sqlAgentAPI = axios.create({
+  baseURL: process.env.NODE_ENV === 'production'
+    ? process.env.REACT_APP_SQL_AGENT_URL + '/api/v1'  // Use environment variable
+    : 'http://localhost:8001/api/v1',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+export const sqlAgentServiceAPI = {
+  // Query endpoint
+  processQuery: async (queryData: {
+    query: string;
+    user_id?: number;
+    context?: any;
+    include_sql?: boolean;
+    include_explanation?: boolean;
+    max_results?: number;
+  }) => {
+    const response = await sqlAgentAPI.post('/sql-agent/query', queryData);
+    return response.data;
+  },
+
+  // Health check
+  healthCheck: async () => {
+    const response = await sqlAgentAPI.get('/sql-agent/health');
+    return response.data;
+  },
+
+  // Chat endpoints
+  createConversation: async (conversationData: { title: string; user_id: number }) => {
+    const response = await sqlAgentAPI.post('/chat/conversations', conversationData);
+    return response.data;
+  },
+
+  getConversations: async (user_id: number) => {
+    const response = await sqlAgentAPI.get(`/chat/conversations?user_id=${user_id}`);
+    return response.data;
+  },
+
+  getChatHistory: async (conversation_id: string) => {
+    const response = await sqlAgentAPI.get(`/chat/conversations/${conversation_id}/history`);
+    return response.data;
+  },
+
+  deleteConversation: async (conversation_id: string) => {
+    const response = await sqlAgentAPI.delete(`/chat/conversations/${conversation_id}`);
+    return response.data;
+  },
+
+  // Document endpoints
+  uploadDocument: async (formData: FormData) => {
+    const response = await sqlAgentAPI.post('/documents/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
+  getDocuments: async (user_id: number) => {
+    const response = await sqlAgentAPI.get(`/documents?user_id=${user_id}`);
+    return response.data;
+  },
+
+  getDocument: async (document_id: string) => {
+    const response = await sqlAgentAPI.get(`/documents/${document_id}`);
+    return response.data;
+  },
+
+  deleteDocument: async (document_id: string) => {
+    const response = await sqlAgentAPI.delete(`/documents/${document_id}`);
+    return response.data;
+  },
+};
+
 export default api; 

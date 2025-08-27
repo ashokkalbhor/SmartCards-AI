@@ -28,6 +28,43 @@ services:
     envVars:
       - key: REACT_APP_API_URL
         value: https://smartcards-ai-backend.onrender.com
+      - key: REACT_APP_SQL_AGENT_URL
+        value: https://smartcards-ai-sql-agent.onrender.com
       - key: REACT_APP_ENVIRONMENT
         value: production
-    autoDeploy: true 
+    autoDeploy: true
+
+  # SQL Agent Service
+  - type: web
+    name: smartcards-ai-sql-agent
+    env: docker
+    dockerfilePath: sql-agent-service/Dockerfile.render
+    plan: free
+    buildCommand: docker build --build-arg CACHEBUST=$(date +%s) .
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: false
+      - key: DATABASE_URL
+        value: sqlite:///./data/sql_agent_service.db
+      - key: TARGET_DATABASE_URL
+        value: sqlite:///./data/smartcards_ai.db
+      - key: EMBEDDING_MODEL
+        value: text-embedding-ada-002
+      - key: CHROMA_COLLECTION_NAME
+        value: credit_card_knowledge
+      - key: CACHE_ENABLED
+        value: true
+      - key: CACHE_TTL_SECONDS
+        value: 3600
+    healthCheckPath: /api/v1/sql-agent/health
+    autoDeploy: true
+    disk:
+      name: sql-agent-data
+      mountPath: /app/data
+      sizeGB: 1 

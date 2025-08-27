@@ -126,6 +126,8 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+sql-agent-env/
+sql-agent-service/sql-agent-env/
 
 # Spyder project settings
 .spyderproject
