@@ -4,6 +4,7 @@ from typing import Dict, List, Optional, Any
 from pathlib import Path
 import logging
 import json
+import yaml
 from datetime import datetime
 
 from app.core.config import settings
@@ -218,6 +219,85 @@ class VectorService:
             return self.user_collection
         else:
             raise ValueError(f"Unknown collection: {collection_name}")
+
+    async def load_tuning_data(self) -> bool:
+        """Load tuning data from YAML file and store in vector database"""
+        try:
+            # Path to tuning data file
+            tuning_file = Path(__file__).parent.parent / "data" / "tuning_data.yaml"
+            
+            if not tuning_file.exists():
+                logger.warning(f"Tuning data file not found: {tuning_file}")
+                return False
+            
+            # Load YAML data
+            with open(tuning_file, 'r', encoding='utf-8') as f:
+                data = yaml.safe_load(f)
+            
+            # Create or recreate tuning collection to ensure fresh data
+            try:
+                self.client.delete_collection(name="tuning_examples")
+            except:
+                pass  # Collection doesn't exist
+            
+            self.tuning_collection = self.client.create_collection(
+                name="tuning_examples",
+                embedding_function=self.embedding_function,
+                metadata={"description": "Tuning examples for credit card recommendations"}
+            )
+            
+            # Add each example to the vector database
+            for i, example in enumerate(data.get('tuning_examples', [])):
+                # Combine question, SQL query, and answer for embedding
+                content = f"Question: {example['question']}\nSQL Query: {example['sql_query']}\nAnswer: {example['answer']}"
+                
+                # Add to vector database
+                self.tuning_collection.add(
+                    documents=[content],
+                    metadatas=[{
+                        "type": "tuning_example",
+                        "category": example.get('category', 'general'),
+                        "question": example['question'],
+                        "sql_query": example['sql_query'],
+                        "answer": example['answer']
+                    }],
+                    ids=[f"tuning_{i}"]
+                )
+            
+            logger.info(f"✅ Loaded {len(data.get('tuning_examples', []))} tuning examples")
+            return True
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to load tuning data: {e}")
+            return False
+
+    async def get_tuning_examples(self, query: str, limit: int = 3) -> List[Dict[str, Any]]:
+        """Get relevant tuning examples for a query"""
+        try:
+            if not hasattr(self, 'tuning_collection'):
+                return []
+            
+            # Search for relevant examples
+            results = self.tuning_collection.query(
+                query_texts=[query],
+                n_results=limit,
+                include=["documents", "metadatas", "distances"]
+            )
+            
+            formatted_results = []
+            if results["documents"]:
+                for i, doc in enumerate(results["documents"][0]):
+                    formatted_results.append({
+                        "content": doc,
+                        "metadata": results["metadatas"][0][i],
+                        "similarity": 1 - results["distances"][0][i]
+                    })
+            
+            return formatted_results
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to get tuning examples: {e}")
+            return []
 
 
 # Create global instance

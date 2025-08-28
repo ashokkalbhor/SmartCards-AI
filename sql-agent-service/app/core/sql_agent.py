@@ -44,6 +44,9 @@ class SQLAgentService:
                 memory_key="chat_history",
                 return_messages=True
             )
+            
+            # Load tuning data into vector database
+            await self.vector_service.load_tuning_data()
 
             # Connect to target business database for SQL queries
             self.target_db = SQLDatabase.from_uri(
@@ -203,6 +206,18 @@ class SQLAgentService:
         """Execute SQL query using LangChain agent"""
         
         try:
+            # Get relevant tuning examples
+            tuning_examples = await self.vector_service.get_tuning_examples(query, limit=2)
+            
+            # Build examples context
+            examples_context = ""
+            if tuning_examples:
+                examples_context = "\n\nRelevant examples:\n"
+                for example in tuning_examples:
+                    examples_context += f"Q: {example['metadata']['question']}\n"
+                    examples_context += f"SQL: {example['metadata']['sql_query']}\n"
+                    examples_context += f"A: {example['metadata']['answer']}\n\n"
+            
             # Create a more specific prompt for better results
             enhanced_prompt = f"""
             You are a credit card recommendation assistant. When asked about credit cards, always:
@@ -210,6 +225,7 @@ class SQLAgentService:
             2. Order results by reward rate (highest first)
             3. Provide specific card names and bank names, not just IDs
             4. Include reward rates in your response
+            5. Follow the style and format of the examples provided
             
             Database schema context:
             - credit_cards: user's cards with basic info
@@ -218,7 +234,7 @@ class SQLAgentService:
             - merchants: merchant information
             
             For Amazon queries, check card_merchant_rewards table where merchant_name = 'amazon'
-            
+            {examples_context}
             Query: {query}
             """
             
