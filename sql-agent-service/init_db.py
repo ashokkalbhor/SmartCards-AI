@@ -12,9 +12,8 @@ from pathlib import Path
 def init_databases():
     """Initialize databases for SQL Agent Service"""
     
-    # Create data directory if it doesn't exist
-    data_dir = Path("/app/data")
-    data_dir.mkdir(exist_ok=True)
+    # Use current directory for databases (simpler for Render deployment)
+    data_dir = Path(".")
     
     # Paths for databases
     sql_agent_db = data_dir / "sql_agent_service.db"

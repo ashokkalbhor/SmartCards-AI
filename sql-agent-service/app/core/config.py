@@ -11,12 +11,12 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     
     # SQL Agent Service Database (for chat history, user sessions, documents)
-    DATABASE_URL: str = "sqlite:///./data/sql_agent_service.db"
-    ASYNC_DATABASE_URL: str = "sqlite+aiosqlite:///./data/sql_agent_service.db"
+    DATABASE_URL: str = "sqlite:///./sql_agent_service.db"
+    ASYNC_DATABASE_URL: str = "sqlite+aiosqlite:///./sql_agent_service.db"
     
     # Target Business Database (for business data - credit cards, transactions, etc.)
-    TARGET_DATABASE_URL: str = "sqlite:///./data/smartcards_ai.db"
-    TARGET_ASYNC_DATABASE_URL: str = "sqlite+aiosqlite:///./data/smartcards_ai.db"
+    TARGET_DATABASE_URL: str = "sqlite:///./smartcards_ai.db"
+    TARGET_ASYNC_DATABASE_URL: str = "sqlite+aiosqlite:///./smartcards_ai.db"
     
     # SQL Agent settings
     SQL_AGENT_TABLES: list = [
