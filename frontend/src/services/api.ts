@@ -575,13 +575,22 @@ export const cardDocumentsAPI = {
 
 // SQL Agent API - Direct calls to SQL Agent Service
 const sqlAgentAPI = axios.create({
-  baseURL: process.env.NODE_ENV === 'production'
-    ? process.env.REACT_APP_SQL_AGENT_URL + '/api/v1'  // Use environment variable
-    : 'http://localhost:8001/api/v1',
+  baseURL: 'https://smartcards-ai-sql-agent.onrender.com/api/v1',  // Always use production URL for now
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+// Remove auth interceptor for SQL Agent API since it doesn't require authentication
+sqlAgentAPI.interceptors.request.use(
+  (config) => {
+    // Don't add auth headers for SQL Agent API
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
 export const sqlAgentServiceAPI = {
   // Query endpoint

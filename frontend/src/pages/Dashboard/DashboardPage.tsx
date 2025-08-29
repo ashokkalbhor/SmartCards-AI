@@ -198,10 +198,6 @@ const DashboardPage: React.FC = () => {
           {...({} as any)}
         >
           <div className="relative">
-            {/* Coming Soon Banner */}
-            <div className="absolute -top-2 -right-2 bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md z-20">
-              COMING SOON
-            </div>
             {/* Expand/Collapse Button */}
             <button
               onClick={() => setIsChatExpanded(!isChatExpanded)}

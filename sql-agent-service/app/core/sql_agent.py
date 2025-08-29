@@ -126,6 +126,9 @@ class SQLAgentService:
                 include_sql, include_explanation, max_results
             )
             
+            # Validate response is based on actual data
+            response = await self._validate_response(response, results, vector_context)
+            
             # Calculate confidence
             confidence = self._calculate_confidence(results, vector_context)
             
@@ -218,9 +221,15 @@ class SQLAgentService:
                     examples_context += f"SQL: {example['metadata']['sql_query']}\n"
                     examples_context += f"A: {example['metadata']['answer']}\n\n"
             
-            # Create a more specific prompt for better results
+            # Create a more specific prompt for better results with guardrails
             enhanced_prompt = f"""
-            You are a credit card recommendation assistant. When asked about credit cards, always:
+            You are a credit card recommendation assistant. CRITICAL RULES:
+            1. ONLY use information from the SQL database (card_master_data, credit_cards, card_merchant_rewards, merchants) or vector database (uploaded documents)
+            2. NEVER make up information about cards, banks, or reward rates
+            3. If you cannot find relevant information in the database, respond with: "I don't have information about that in my database. I can help you with credit card recommendations, reward rates, merchant-specific offers, and banking product information. Please ask me about credit cards and other banking products."
+            4. Always verify information exists in the database before providing it
+            
+            When asked about credit cards, always:
             1. Join tables to get complete card information (card names, bank names, reward rates)
             2. Order results by reward rate (highest first)
             3. Provide specific card names and bank names, not just IDs
@@ -271,6 +280,20 @@ class SQLAgentService:
             logger.error(f"Error executing raw SQL: {e}")
             return []
     
+    async def _validate_response(self, response: str, sql_results: List[Dict[str, Any]], vector_results: List[Dict[str, Any]]) -> str:
+        """Validate that response is based on actual data"""
+        
+        # Check if we have any actual data
+        has_sql_data = bool(sql_results and len(sql_results) > 0)
+        has_vector_data = bool(vector_results and len(vector_results) > 0)
+        
+        # If no data found, return scope message
+        if not has_sql_data and not has_vector_data:
+            return "I don't have information about that in my database. I can help you with credit card recommendations, reward rates, merchant-specific offers, and banking product information. Please ask me about credit cards and other banking products."
+        
+        # If we have data, return the original response
+        return response
+
     async def _format_response(
         self,
         original_query: str,

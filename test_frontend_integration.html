@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQL Agent Service Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .chat-container {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            height: 400px;
+            overflow-y: auto;
+            padding: 15px;
+            margin-bottom: 15px;
+            background-color: #fafafa;
+        }
+        .message {
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            max-width: 70%;
+        }
+        .user-message {
+            background-color: #007bff;
+            color: white;
+            margin-left: auto;
+        }
+        .bot-message {
+            background-color: #e9ecef;
+            color: #333;
+        }
+        .input-container {
+            display: flex;
+            gap: 10px;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .loading {
+            display: none;
+            color: #666;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>SQL Agent Service - Frontend Integration Test</h1>
+        <p>This page tests the direct integration between frontend and SQL Agent Service.</p>
+        
+        <div class="chat-container" id="chatContainer">
+            <div class="message bot-message">
+                Hello! I'm your SmartCards AI assistant. I can help you with credit card recommendations, spending analysis, and reward optimization. How can I assist you today?
+            </div>
+        </div>
+        
+        <div class="input-container">
+            <input type="text" id="messageInput" placeholder="Ask me about your cards, spending, or rewards..." />
+            <button id="sendButton" onclick="sendMessage()">Send</button>
+        </div>
+        
+        <div class="loading" id="loading">AI is thinking...</div>
+        
+        <div id="status"></div>
+        
+        <div style="margin-top: 20px;">
+            <h3>Test Queries:</h3>
+            <ul>
+                <li><button onclick="testQuery('Show me all credit cards')">Show me all credit cards</button></li>
+                <li><button onclick="testQuery('Which card is best for Amazon?')">Which card is best for Amazon?</button></li>
+                <li><button onclick="testQuery('What are the most popular cards?')">What are the most popular cards?</button></li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        const SQL_AGENT_URL = 'http://localhost:8001';
+        
+        function addMessage(text, isUser = false) {
+            const chatContainer = document.getElementById('chatContainer');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
+            messageDiv.textContent = text;
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+        
+        function showStatus(message, isError = false) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = `status ${isError ? 'error' : 'success'}`;
+            statusDiv.textContent = message;
+        }
+        
+        function showLoading(show) {
+            const loadingDiv = document.getElementById('loading');
+            loadingDiv.style.display = show ? 'block' : 'none';
+        }
+        
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const button = document.getElementById('sendButton');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            // Add user message
+            addMessage(message, true);
+            input.value = '';
+            button.disabled = true;
+            showLoading(true);
+            
+            try {
+                const response = await fetch(`${SQL_AGENT_URL}/api/v1/sql-agent/query`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        query: message,
+                        user_id: 1,
+                        context: {
+                            user_cards: [],
+                            user_email: "user@example.com"
+                        },
+                        include_sql: true,
+                        include_explanation: true,
+                        max_results: 10
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                // Add bot response
+                addMessage(data.response);
+                
+                showStatus(`Query processed successfully in ${(data.processing_time * 1000).toFixed(0)}ms`);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                addMessage("I'm sorry, I'm having trouble processing your request right now. Please try again.");
+                showStatus(`Error: ${error.message}`, true);
+            } finally {
+                button.disabled = false;
+                showLoading(false);
+            }
+        }
+        
+        function testQuery(query) {
+            document.getElementById('messageInput').value = query;
+            sendMessage();
+        }
+        
+        // Allow Enter key to send message
+        document.getElementById('messageInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+        
+        // Test service health on page load
+        window.addEventListener('load', async () => {
+            try {
+                const response = await fetch(`${SQL_AGENT_URL}/health`);
+                if (response.ok) {
+                    showStatus('SQL Agent Service is running and healthy');
+                } else {
+                    showStatus('SQL Agent Service health check failed', true);
+                }
+            } catch (error) {
+                showStatus('Cannot connect to SQL Agent Service. Make sure it\'s running on localhost:8001', true);
+            }
+        });
+    </script>
+</body>
+</html>
+
