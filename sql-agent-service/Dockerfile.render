@@ -28,10 +28,6 @@ COPY app/ ./app/
 # Copy initialization script
 COPY init_db.py .
 
-# Copy database files to data directory
-COPY *.db ./data/
-COPY chroma_db/ ./chroma_db/
-
 # Create data directory and non-root user
 RUN mkdir -p /app/data && \
     adduser --disabled-password --gecos '' appuser && \

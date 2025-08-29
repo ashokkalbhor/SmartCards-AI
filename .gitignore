@@ -193,4 +193,8 @@ logs
 
 # Temporary files
 tmp/
-temp/ 
+temp/
+
+# Database files (explicit exclusions)
+smartcards_ai.db
+sql-agent-service/smartcards_ai.db 
