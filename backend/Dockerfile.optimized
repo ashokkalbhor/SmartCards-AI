@@ -47,7 +47,7 @@ COPY alembic.ini .
 COPY smartcards_ai.db .
 
 # Copy SQL agent data (only essential files)
-COPY sql-agent-service/app/data/ ./app/data/
+COPY app/data/ ./app/data/
 
 # Create necessary directories
 RUN mkdir -p uploads chroma_db && \
