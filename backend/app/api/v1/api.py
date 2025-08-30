@@ -1,6 +1,8 @@
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import auth, users, credit_cards, merchants, transactions, rewards, recommendations, card_master_data, card_reviews, community, admin, moderator, user_roles, card_documents, sql_agent
+from app.api.v1.endpoints import auth, users, credit_cards, merchants, transactions, rewards, recommendations, card_master_data, card_reviews, community, admin, moderator, user_roles, card_documents
+# Temporarily disabled SQL Agent for debugging
+# from app.api.v1.endpoints import sql_agent
 # Temporarily disabled AI endpoints for deployment
 # from app.api.v1.endpoints import chatbot, enhanced_chatbot
 
@@ -21,7 +23,8 @@ api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
 api_router.include_router(moderator.router, prefix="/moderator", tags=["moderator"])
 api_router.include_router(user_roles.router, prefix="/user-roles", tags=["user-roles"])
 api_router.include_router(card_documents.router, prefix="/card-documents", tags=["card-documents"])
-api_router.include_router(sql_agent.router, prefix="/sql-agent", tags=["sql-agent"])
+# Temporarily disabled SQL Agent for debugging
+# api_router.include_router(sql_agent.router, prefix="/sql-agent", tags=["sql-agent"])
 
 # Temporarily disabled AI endpoints
 # api_router.include_router(chatbot.router, prefix="/chatbot", tags=["chatbot"])
