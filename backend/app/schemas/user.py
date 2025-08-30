@@ -1,10 +1,10 @@
 from typing import Optional
-from pydantic import BaseModel, EmailStr, validator
+from pydantic import BaseModel, validator
 from datetime import datetime
 
 
 class UserBase(BaseModel):
-    email: EmailStr
+    email: str
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     phone: Optional[str] = None
@@ -39,7 +39,7 @@ class UserUpdate(BaseModel):
 
 
 class UserLogin(BaseModel):
-    email: EmailStr
+    email: str
     password: str
 
 
@@ -87,7 +87,7 @@ class TokenData(BaseModel):
 
 
 class PasswordReset(BaseModel):
-    email: EmailStr
+    email: str
 
 
 class PasswordResetConfirm(BaseModel):
