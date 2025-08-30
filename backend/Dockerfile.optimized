@@ -1,6 +1,9 @@
 # Multi-stage build for optimized container size
 FROM python:3.11-slim as builder
 
+# Build argument for cache busting
+ARG CACHEBUST=1
+
 # Install system dependencies for building
 RUN apt-get update && apt-get install -y \
     gcc \
@@ -13,7 +16,9 @@ ENV PATH="/opt/venv/bin:$PATH"
 
 # Copy requirements and install dependencies
 COPY requirements-optimized.txt .
-RUN pip install --no-cache-dir -r requirements-optimized.txt
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements-optimized.txt && \
+    pip list | grep langchain
 
 # Remove Python cache files to reduce size
 RUN find /opt/venv -name "*.pyc" -delete && \
