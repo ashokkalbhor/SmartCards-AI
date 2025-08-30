@@ -23,7 +23,7 @@ RUN apt-get update \
 COPY requirements-optimized.txt requirements.txt
 RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt \
-    && pip install --no-cache-dir langchain==0.0.340 langchain-openai==0.0.2 langchain-community==0.0.10 \
+    && pip install --no-cache-dir langchain==0.0.335 langchain-openai==0.0.2 langchain-community==0.0.10 \
     && pip list | grep -i langchain || echo "Warning: langchain not found in pip list"
 
 # Copy project (this will be affected by CACHEBUST)
