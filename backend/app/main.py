@@ -88,19 +88,20 @@ async def log_requests(request: Request, call_next):
     
     return response
 
-@app.on_event("startup")
-async def startup_event():
-    """Initialize services on startup"""
-    global sql_agent_service
-    
-    try:
-        # Initialize SQL Agent Service
-        sql_agent_service = SQLAgentService()
-        await sql_agent_service.initialize()
-        logger.info("✅ SQL Agent Service initialized successfully")
-    except Exception as e:
-        logger.error(f"❌ Failed to initialize SQL Agent Service: {e}")
-        # Continue running - service will be in degraded mode
+# SQL Agent startup disabled for minimal deployment
+# @app.on_event("startup")
+# async def startup_event():
+#     """Initialize services on startup"""
+#     global sql_agent_service
+#     
+#     try:
+#         # Initialize SQL Agent Service
+#         sql_agent_service = SQLAgentService()
+#         await sql_agent_service.initialize()
+#         logger.info("✅ SQL Agent Service initialized successfully")
+#     except Exception as e:
+#         logger.error(f"❌ Failed to initialize SQL Agent Service: {e}")
+#         # Continue running - service will be in degraded mode
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):

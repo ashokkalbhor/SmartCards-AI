@@ -1,6 +1,8 @@
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import auth, users, credit_cards, merchants, transactions, rewards, recommendations, card_master_data, card_reviews, community, admin, moderator, user_roles, card_documents, sql_agent
+from app.api.v1.endpoints import auth, users, credit_cards, merchants, transactions, rewards, recommendations, card_master_data, card_reviews, community, admin, moderator, user_roles, card_documents
+# SQL Agent disabled for minimal deployment
+# from app.api.v1.endpoints import sql_agent
 # Temporarily disabled AI endpoints for deployment
 # from app.api.v1.endpoints import chatbot, enhanced_chatbot
 
