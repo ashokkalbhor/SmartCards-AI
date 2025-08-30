@@ -1,0 +1,79 @@
+CREATE TABLE alembic_version (
+	version_num VARCHAR(32) NOT NULL, 
+	CONSTRAINT alembic_version_pkc PRIMARY KEY (version_num)
+);
+CREATE TABLE chat_users (
+	id INTEGER NOT NULL, 
+	user_id VARCHAR NOT NULL, 
+	username VARCHAR NOT NULL, 
+	hashed_password VARCHAR NOT NULL, 
+	client_id VARCHAR, 
+	created_at DATETIME, 
+	is_active BOOLEAN, 
+	PRIMARY KEY (id)
+);
+CREATE INDEX ix_chat_users_id ON chat_users (id);
+CREATE UNIQUE INDEX ix_chat_users_user_id ON chat_users (user_id);
+CREATE UNIQUE INDEX ix_chat_users_username ON chat_users (username);
+CREATE INDEX ix_chat_users_client_id ON chat_users (client_id);
+CREATE TABLE conversations (
+	id INTEGER NOT NULL, 
+	user_id VARCHAR NOT NULL, 
+	conversation_id VARCHAR NOT NULL, 
+	title VARCHAR, 
+	created_at DATETIME, 
+	updated_at DATETIME, 
+	message_count INTEGER, 
+	PRIMARY KEY (id)
+);
+CREATE INDEX ix_conversations_id ON conversations (id);
+CREATE INDEX ix_conversations_user_id ON conversations (user_id);
+CREATE UNIQUE INDEX ix_conversations_conversation_id ON conversations (conversation_id);
+CREATE TABLE chat_messages (
+	id INTEGER NOT NULL, 
+	user_id VARCHAR NOT NULL, 
+	conversation_id VARCHAR NOT NULL, 
+	message TEXT NOT NULL, 
+	response TEXT NOT NULL, 
+	timestamp DATETIME, 
+	confidence FLOAT, 
+	sql_query TEXT, 
+	execution_time FLOAT, 
+	error_message TEXT, 
+	PRIMARY KEY (id)
+);
+CREATE INDEX ix_chat_messages_id ON chat_messages (id);
+CREATE INDEX ix_chat_messages_user_id ON chat_messages (user_id);
+CREATE INDEX ix_chat_messages_conversation_id ON chat_messages (conversation_id);
+CREATE TABLE user_sessions (
+	id INTEGER NOT NULL, 
+	user_id VARCHAR NOT NULL, 
+	session_id VARCHAR NOT NULL, 
+	session_start DATETIME, 
+	last_activity DATETIME, 
+	is_active BOOLEAN, 
+	PRIMARY KEY (id)
+);
+CREATE INDEX ix_user_sessions_id ON user_sessions (id);
+CREATE INDEX ix_user_sessions_user_id ON user_sessions (user_id);
+CREATE UNIQUE INDEX ix_user_sessions_session_id ON user_sessions (session_id);
+CREATE TABLE documents (
+	id VARCHAR NOT NULL, 
+	filename VARCHAR NOT NULL, 
+	original_filename VARCHAR NOT NULL, 
+	file_path VARCHAR NOT NULL, 
+	file_size INTEGER NOT NULL, 
+	document_type VARCHAR NOT NULL, 
+	status VARCHAR NOT NULL, 
+	description TEXT, 
+	tags TEXT, 
+	user_id VARCHAR NOT NULL, 
+	uploaded_at DATETIME, 
+	processed_at DATETIME, 
+	text_content TEXT, 
+	vector_id VARCHAR, 
+	error_message TEXT, 
+	PRIMARY KEY (id)
+);
+CREATE INDEX ix_documents_id ON documents (id);
+CREATE INDEX ix_documents_user_id ON documents (user_id);

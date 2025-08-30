@@ -1,83 +1,150 @@
-# Python
+# Development files
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
+*.pyc
+*.pyo
+*.pyd
 .Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-
-# Virtual environments
-venv/
 env/
-ENV/
-env.bak/
-venv.bak/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Logs
-*.log
-logs/
-
-# Database
-*.db
-*.sqlite
-*.sqlite3
-
-# Development
-.env
-.env.local
-.env.development
-.env.test
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
 
 # Documentation
 docs/
 *.md
 README*
 
-# Tests
-tests/
-test_*
-*_test.py
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
 # Git
 .git/
 .gitignore
 
-# Docker
-Dockerfile*
-docker-compose*
-.dockerignore
-
-# Railway
-railway.json
-railway.toml
+# Logs
+*.log
+logs/
+log/
 
 # Temporary files
 *.tmp
 *.temp
-.cache/ 
+
+# Development requirements
+requirements-dev.txt
+requirements-test.txt
+
+# Unused directories
+tests/
+scripts/
+migrations/versions/
+*.sql
+
+# Large files that aren't needed
+*.db.bak
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+
+# Database backups and temporary files
+backup/
+*.backup
+*.old
+*.orig
+
+# Large media files
+*.mp4
+*.avi
+*.mov
+*.wmv
+*.flv
+*.webm
+*.mkv
+
+# Large image files
+*.psd
+*.ai
+*.eps
+*.tiff
+*.tif
+
+# Archive files
+*.zip
+*.tar
+*.gz
+*.rar
+*.7z
+
+# Cache directories
+.cache/
+cache/
+node_modules/
+npm-debug.log*
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Docker files
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Deployment files
+railway.json
+railway.toml
+render.yaml
+vercel.json
+netlify.toml
+
+# ChromaDB and vector database files (exclude large files)
+chroma_db/
+**/chroma_db/
+*.chroma
+*.parquet
+*.index
+*.faiss
+*.hnsw
+*.ivf
+*.lsh
+*.pkl
+*.pickle
+
+# Vector embeddings and models
+*.bin
+*.model
+*.vec
+*.emb
+embeddings/
+models/ 

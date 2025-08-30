@@ -71,6 +71,10 @@ class Settings(BaseSettings):
     OPENAI_MODEL: str = "gpt-4-turbo-preview"
     EMBEDDING_MODEL: str = "text-embedding-ada-002"
     
+    # Target Database Configuration (for SQL Agent)
+    TARGET_DATABASE_URL: Optional[str] = None
+    TARGET_ASYNC_DATABASE_URL: Optional[str] = None
+    
     # Vector Database Configuration
     CHROMA_DB_PATH: str = "./chroma_db"
     CHROMA_COLLECTION_NAME: str = "credit_card_knowledge"
@@ -80,6 +84,26 @@ class Settings(BaseSettings):
     TEMPERATURE: float = 0.7
     VECTOR_SEARCH_LIMIT: int = 5
     SIMILARITY_THRESHOLD: float = 0.75
+    
+    # Cache settings
+    CACHE_ENABLED: bool = True
+    CACHE_TTL_SECONDS: int = 3600  # 1 hour
+    CACHE_MAX_SIZE: int = 1000
+    CACHE_TTL: int = 3600  # Alias for CACHE_TTL_SECONDS
+    
+    # SQL Agent settings
+    SQL_AGENT_TABLES: list = [
+        "credit_cards",
+        "card_master_data", 
+        "card_spending_categories",
+        "card_merchant_rewards",
+        "merchants",
+        "transactions",
+        "rewards",
+        "users"
+    ]
+    SQL_AGENT_MAX_RETRIES: int = 3
+    SQL_AGENT_TIMEOUT: int = 30
     
     # Chatbot Configuration
     MAX_CONVERSATION_HISTORY: int = 10
@@ -113,6 +137,44 @@ class Settings(BaseSettings):
     @field_validator("ASYNC_DATABASE_URL", mode="before")
     @classmethod
     def assemble_async_db_connection(cls, v: Optional[str], values: dict) -> str:
+        if isinstance(v, str):
+            return v
+        
+        # For development, use SQLite
+        if os.getenv("ENVIRONMENT", "development") == "development":
+            return "sqlite+aiosqlite:///./smartcards_ai.db"
+        
+        # Build from components if not provided (for production)
+        user = os.getenv("DB_USER", "smartcards_user")
+        password = os.getenv("DB_PASSWORD", "smartcards_password")
+        host = os.getenv("DB_HOST", "localhost")
+        port = os.getenv("DB_PORT", "5432")
+        db = os.getenv("DB_NAME", "smartcards_ai")
+        
+        return f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{db}"
+    
+    @field_validator("TARGET_DATABASE_URL", mode="before")
+    @classmethod
+    def assemble_target_db_connection(cls, v: Optional[str], values: dict) -> str:
+        if isinstance(v, str):
+            return v
+        
+        # For development, use SQLite
+        if os.getenv("ENVIRONMENT", "development") == "development":
+            return "sqlite:///./smartcards_ai.db"
+        
+        # Build from components if not provided (for production)
+        user = os.getenv("DB_USER", "smartcards_user")
+        password = os.getenv("DB_PASSWORD", "smartcards_password")
+        host = os.getenv("DB_HOST", "localhost")
+        port = os.getenv("DB_PORT", "5432")
+        db = os.getenv("DB_NAME", "smartcards_ai")
+        
+        return f"postgresql://{user}:{password}@{host}:{port}/{db}"
+    
+    @field_validator("TARGET_ASYNC_DATABASE_URL", mode="before")
+    @classmethod
+    def assemble_target_async_db_connection(cls, v: Optional[str], values: dict) -> str:
         if isinstance(v, str):
             return v
         

@@ -4,7 +4,7 @@ import axios from 'axios';
 const api = axios.create({
   baseURL: process.env.NODE_ENV === 'production' 
     ? 'https://smartcards-ai-2.onrender.com/api/v1'  // Render backend URL
-    : 'http://localhost:8000/api/v1',
+    : 'http://localhost:8001/api/v1',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -39,7 +39,7 @@ api.interceptors.response.use(
                   const response = await axios.post(
           process.env.NODE_ENV === 'production' 
             ? 'https://smartcards-ai-2.onrender.com/api/v1/auth/refresh'
-            : 'http://localhost:8000/api/v1/auth/refresh',
+            : 'http://localhost:8001/api/v1/auth/refresh',
           {
             refresh_token: refreshToken,
           }
@@ -573,20 +573,23 @@ export const cardDocumentsAPI = {
   },
 };
 
-// SQL Agent API - Direct calls to SQL Agent Service
+// SQL Agent API - Now integrated into main backend
 const sqlAgentAPI = axios.create({
   baseURL: process.env.NODE_ENV === 'production' 
-    ? 'https://smartcards-ai-sql-agent.onrender.com/api/v1'  // Production SQL Agent URL
-    : 'http://localhost:8001/api/v1',  // Local SQL Agent URL
+    ? 'https://smartcards-ai-backend.onrender.com/api/v1'  // Production backend URL
+    : 'http://localhost:8001/api/v1',  // Local backend URL
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Remove auth interceptor for SQL Agent API since it doesn't require authentication
+// Add auth interceptor for SQL Agent API since it's now part of main backend
 sqlAgentAPI.interceptors.request.use(
   (config) => {
-    // Don't add auth headers for SQL Agent API
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
     return config;
   },
   (error) => {

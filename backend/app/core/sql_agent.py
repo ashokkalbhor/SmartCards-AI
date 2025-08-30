@@ -15,7 +15,6 @@ from langchain.schema import BaseMessage
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.database import get_database_schema
 from app.services.vector_service import VectorService
 from app.services.cache_service import CacheService
 
@@ -58,7 +57,7 @@ class SQLAgentService:
             # Connect to service database for chat operations
             self.db = SQLDatabase.from_uri(
                 settings.DATABASE_URL,
-                include_tables=["chat_users", "conversations", "chat_messages", "user_sessions", "documents"],
+                include_tables=["conversations", "conversation_messages"],
                 sample_rows_in_table_info=3
             )
 

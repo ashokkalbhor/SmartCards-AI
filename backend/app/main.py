@@ -12,15 +12,19 @@ from app.core.config import settings
 from app.api.v1.api import api_router
 from app.core.database import engine
 from app.core.logging import setup_logging
+from app.core.sql_agent import SQLAgentService
 
 # Setup logging
 setup_logging()
 logger = structlog.get_logger()
 
+# Global SQL Agent Service instance
+sql_agent_service = None
+
 # Create FastAPI app
 app = FastAPI(
     title="SmartCards AI API",
-    description="Intelligent credit card recommendation system",
+    description="Intelligent credit card recommendation system with SQL Agent",
     version="1.0.0",
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     docs_url="/docs",
@@ -83,6 +87,20 @@ async def log_requests(request: Request, call_next):
     )
     
     return response
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize services on startup"""
+    global sql_agent_service
+    
+    try:
+        # Initialize SQL Agent Service
+        sql_agent_service = SQLAgentService()
+        await sql_agent_service.initialize()
+        logger.info("✅ SQL Agent Service initialized successfully")
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize SQL Agent Service: {e}")
+        # Continue running - service will be in degraded mode
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
