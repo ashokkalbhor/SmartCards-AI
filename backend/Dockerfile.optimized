@@ -1,5 +1,5 @@
 # Multi-stage build for optimized container size
-FROM python:3.11-slim as builder
+FROM python:3.9-slim as builder
 
 # Build argument for cache busting
 ARG CACHEBUST=1
@@ -27,7 +27,7 @@ RUN find /opt/venv -name "*.pyc" -delete && \
     find /opt/venv -name "*.pyd" -delete
 
 # Production stage
-FROM python:3.11-slim as production
+FROM python:3.9-slim as production
 
 # Install only runtime system dependencies
 RUN apt-get update && apt-get install -y \
