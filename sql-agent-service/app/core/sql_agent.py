@@ -70,12 +70,12 @@ class SQLAgentService:
             )
 
             # Create SQL toolkit
-            toolkit = SQLDatabaseToolkit(db=self.target_db, llm=llm)
+            self.toolkit = SQLDatabaseToolkit(db=self.target_db, llm=llm)
 
             # Create SQL agent
             self.agent = create_sql_agent(
                 llm=llm,
-                toolkit=toolkit,
+                toolkit=self.toolkit,
                 agent_type=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
                 verbose=True,
                 memory=self.memory
@@ -195,10 +195,14 @@ class SQLAgentService:
             enhanced_parts.append(f"Context from documents: {context_text}")
         
         # Add additional context
-        if context:
-            if "user_cards" in context:
-                cards_info = ", ".join([f"{card['card_name']} ({card['bank_name']})" for card in context["user_cards"]])
-                enhanced_parts.append(f"User's cards: {cards_info}")
+        if context and isinstance(context, dict):
+            if "user_cards" in context and isinstance(context["user_cards"], list):
+                try:
+                    cards_info = ", ".join([f"{card.get('card_name', 'Unknown')} ({card.get('bank_name', 'Unknown')})" for card in context["user_cards"] if isinstance(card, dict)])
+                    if cards_info:
+                        enhanced_parts.append(f"User's cards: {cards_info}")
+                except Exception as e:
+                    logger.warning(f"Failed to process user cards: {e}")
             
             if "spending_pattern" in context:
                 enhanced_parts.append(f"Spending pattern: {context['spending_pattern']}")
@@ -251,14 +255,37 @@ class SQLAgentService:
             result = await self.agent.ainvoke({"input": enhanced_prompt})
             
             # Extract SQL query and results
-            sql_query = result.get("intermediate_steps", [{}])[-1].get("tool_input", "")
             explanation = result.get("output", "")
+            
+            # Try to extract SQL query from intermediate steps
+            sql_query = ""
+            results = []
+            
+            intermediate_steps = result.get("intermediate_steps", [])
+            if intermediate_steps:
+                for step in intermediate_steps:
+                    if isinstance(step, tuple) and len(step) >= 2:
+                        action, action_input = step[0], step[1]
+                        if action and hasattr(action, 'name') and action.name == 'sql_db_query':
+                            sql_query = action_input
+                            break
+                    elif isinstance(step, dict):
+                        if step.get('tool') == 'sql_db_query':
+                            sql_query = step.get('tool_input', '')
+                            break
             
             # Execute SQL to get actual results
             if sql_query:
                 results = await self._execute_raw_sql(sql_query)
             else:
-                results = []
+                # If no SQL query found, try to extract results from the explanation
+                # This handles cases where the agent provides the answer directly
+                if explanation and "reward rate" in explanation.lower():
+                    results = [{"result": explanation}]
+                else:
+                    results = []
+            
+
             
             return sql_query, results, explanation
             
@@ -270,11 +297,27 @@ class SQLAgentService:
         """Execute raw SQL query and return results"""
         try:
             # Use the database toolkit to execute SQL
-            result = await self.toolkit.db.arun(sql_query)
+            result = self.toolkit.db.run(sql_query)
             
-            # Parse results (this is a simplified version)
-            # In a real implementation, you'd parse the result properly
-            return [{"result": result}] if result else []
+            # Parse results properly
+            if result:
+                # If result is a string, try to parse it as JSON or return as is
+                if isinstance(result, str):
+                    try:
+                        import json
+                        parsed_result = json.loads(result)
+                        if isinstance(parsed_result, list):
+                            return parsed_result
+                        else:
+                            return [{"result": parsed_result}]
+                    except json.JSONDecodeError:
+                        return [{"result": result}]
+                elif isinstance(result, list):
+                    return result
+                else:
+                    return [{"result": result}]
+            else:
+                return []
             
         except Exception as e:
             logger.error(f"Error executing raw SQL: {e}")
@@ -351,7 +394,7 @@ class SQLAgentService:
         key_parts = [query]
         if user_id:
             key_parts.append(str(user_id))
-        if context:
+        if context and isinstance(context, dict):
             key_parts.append(str(sorted(context.items())))
         
         key_string = "|".join(key_parts)

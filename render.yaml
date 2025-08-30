@@ -48,10 +48,8 @@ services:
         value: production
       - key: DEBUG
         value: false
-      - key: DATABASE_URL
-        value: sqlite:///./data/sql_agent_service.db
-      - key: TARGET_DATABASE_URL
-        value: sqlite:///./data/smartcards_ai.db
+      - key: ENVIRONMENT
+        value: production
       - key: EMBEDDING_MODEL
         value: text-embedding-ada-002
       - key: CHROMA_COLLECTION_NAME

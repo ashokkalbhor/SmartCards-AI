@@ -72,15 +72,13 @@ const EnhancedChatBot: React.FC = () => {
       const userData = {
         user_id: 1, // Default user ID
         context: {
-          user_cards: [], // Will be populated by SQL agent from database
-          user_email: "user@example.com"
+          user_cards: [] // Will be populated by SQL agent from database
         }
       };
 
       const response = await sqlAgentServiceAPI.processQuery({
         query: inputMessage,
         user_id: userData.user_id,
-        context: userData.context,
         include_sql: true,
         include_explanation: true,
         max_results: 10

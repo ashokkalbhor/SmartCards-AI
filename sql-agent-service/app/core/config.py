@@ -84,6 +84,9 @@ class Settings(BaseSettings):
     def assemble_db_connection(cls, v: Optional[str], values: dict) -> str:
         if isinstance(v, str):
             return v
+        # Use environment-based path
+        if os.getenv("ENVIRONMENT") == "production":
+            return "sqlite:///./data/sql_agent_service.db"
         return "sqlite:///./sql_agent_service.db"
 
     @field_validator("ASYNC_DATABASE_URL", mode="before")
@@ -91,7 +94,30 @@ class Settings(BaseSettings):
     def assemble_async_db_connection(cls, v: Optional[str], values: dict) -> str:
         if isinstance(v, str):
             return v
+        # Use environment-based path
+        if os.getenv("ENVIRONMENT") == "production":
+            return "sqlite+aiosqlite:///./data/sql_agent_service.db"
         return "sqlite+aiosqlite:///./sql_agent_service.db"
+    
+    @field_validator("TARGET_DATABASE_URL", mode="before")
+    @classmethod
+    def assemble_target_db_connection(cls, v: Optional[str], values: dict) -> str:
+        if isinstance(v, str):
+            return v
+        # Use environment-based path
+        if os.getenv("ENVIRONMENT") == "production":
+            return "sqlite:///./data/smartcards_ai.db"
+        return "sqlite:///./smartcards_ai.db"
+
+    @field_validator("TARGET_ASYNC_DATABASE_URL", mode="before")
+    @classmethod
+    def assemble_target_async_db_connection(cls, v: Optional[str], values: dict) -> str:
+        if isinstance(v, str):
+            return v
+        # Use environment-based path
+        if os.getenv("ENVIRONMENT") == "production":
+            return "sqlite+aiosqlite:///./data/smartcards_ai.db"
+        return "sqlite+aiosqlite:///./smartcards_ai.db"
     
     @field_validator("JWT_SECRET_KEY", mode="before")
     @classmethod

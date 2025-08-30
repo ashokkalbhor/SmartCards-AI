@@ -575,7 +575,9 @@ export const cardDocumentsAPI = {
 
 // SQL Agent API - Direct calls to SQL Agent Service
 const sqlAgentAPI = axios.create({
-  baseURL: 'https://smartcards-ai-sql-agent.onrender.com/api/v1',  // Always use production URL for now
+  baseURL: process.env.NODE_ENV === 'production' 
+    ? 'https://smartcards-ai-sql-agent.onrender.com/api/v1'  // Production SQL Agent URL
+    : 'http://localhost:8001/api/v1',  // Local SQL Agent URL
   headers: {
     'Content-Type': 'application/json',
   },
