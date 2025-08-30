@@ -3,8 +3,7 @@ from typing import Optional, Dict, Any
 from pydantic import BaseModel
 import logging
 
-# Temporarily disable SQL Agent import for deployment
-# from app.core.sql_agent import SQLAgentService
+from app.core.sql_agent import SQLAgentService
 from app.core.database import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -34,38 +33,30 @@ async def get_sql_agent_service():
     """Get or initialize SQL Agent Service"""
     global sql_agent_service
     if sql_agent_service is None:
-        # Temporarily disabled for deployment
-        # sql_agent_service = SQLAgentService()
-        # try:
-        #     await sql_agent_service.initialize()
-        #     logger.info("SQL Agent Service initialized successfully")
-        # except Exception as e:
-        #     logger.error(f"Failed to initialize SQL Agent Service: {e}")
-        #     raise HTTPException(status_code=500, detail="SQL Agent Service initialization failed")
-        raise HTTPException(status_code=503, detail="SQL Agent Service temporarily unavailable")
+        sql_agent_service = SQLAgentService()
+        try:
+            await sql_agent_service.initialize()
+            logger.info("SQL Agent Service initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize SQL Agent Service: {e}")
+            raise HTTPException(status_code=500, detail="SQL Agent Service initialization failed")
     return sql_agent_service
 
 @router.post("/query", response_model=QueryResponse)
 async def process_query(
     request: QueryRequest,
-    db: AsyncSession = Depends(get_db)
-    # agent_service: SQLAgentService = Depends(get_sql_agent_service)
+    db: AsyncSession = Depends(get_db),
+    agent_service: SQLAgentService = Depends(get_sql_agent_service)
 ):
     """Process a natural language query using the SQL agent"""
     try:
-        # Temporarily disabled for deployment
-        # result = await agent_service.process_query(
-        #     query=request.query,
-        #     user_id=request.user_id,
-        #     context=request.context,
-        #     include_sql=request.include_sql,
-        #     include_explanation=request.include_explanation,
-        #     max_results=request.max_results
-        # )
-        return QueryResponse(
+        result = await agent_service.process_query(
             query=request.query,
-            response="SQL Agent service is temporarily unavailable. Please try again later.",
-            error="Service temporarily disabled for deployment"
+            user_id=request.user_id,
+            context=request.context,
+            include_sql=request.include_sql,
+            include_explanation=request.include_explanation,
+            max_results=request.max_results
         )
         
         return QueryResponse(
