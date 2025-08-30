@@ -12,14 +12,15 @@ from app.core.config import settings
 from app.api.v1.api import api_router
 from app.core.database import engine
 from app.core.logging import setup_logging
-from app.core.sql_agent import SQLAgentService
+# Temporarily disabled SQL Agent for deployment
+# from app.core.sql_agent import SQLAgentService
 
 # Setup logging
 setup_logging()
 logger = structlog.get_logger()
 
-# Global SQL Agent Service instance
-sql_agent_service = None
+# Global SQL Agent Service instance (temporarily disabled)
+# sql_agent_service = None
 
 # Create FastAPI app
 app = FastAPI(
@@ -94,10 +95,11 @@ async def startup_event():
     global sql_agent_service
     
     try:
-        # Initialize SQL Agent Service
-        sql_agent_service = SQLAgentService()
-        await sql_agent_service.initialize()
-        logger.info("✅ SQL Agent Service initialized successfully")
+        # Temporarily disabled SQL Agent Service for deployment
+        # sql_agent_service = SQLAgentService()
+        # await sql_agent_service.initialize()
+        # logger.info("✅ SQL Agent Service initialized successfully")
+        logger.info("✅ SQL Agent Service temporarily disabled for deployment")
     except Exception as e:
         logger.error(f"❌ Failed to initialize SQL Agent Service: {e}")
         # Continue running - service will be in degraded mode
