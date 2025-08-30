@@ -12,7 +12,8 @@ from app.core.config import settings
 from app.api.v1.api import api_router
 from app.core.database import engine
 from app.core.logging import setup_logging
-from app.core.sql_agent import SQLAgentService
+# Temporarily disabled SQL Agent for deployment
+# from app.core.sql_agent import SQLAgentService
 
 # Setup logging
 setup_logging()
