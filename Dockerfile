@@ -1,7 +1,7 @@
 # Root Dockerfile for Render deployment
 # This file points to the backend Dockerfile.render
 
-FROM python:3.11-slim
+FROM python:3.9-slim
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
