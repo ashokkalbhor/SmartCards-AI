@@ -71,7 +71,7 @@ sentence-transformers==2.2.2
 tiktoken==0.5.2
 
 # LangChain for SQL Agent
-langchain==0.0.335
+langchain==0.1.0
 langchain-openai==0.0.2
 langchain-community==0.0.10
 

@@ -1,4 +1,4 @@
-FROM python:3.9-slim
+FROM python:3.11-slim
 
 # Add cache busting
 ARG CACHEBUST=1
@@ -23,7 +23,7 @@ RUN apt-get update \
 COPY requirements-optimized.txt requirements.txt
 RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt \
-    && pip install --no-cache-dir langchain==0.0.335 langchain-openai==0.0.2 langchain-community==0.0.10 \
+    && pip install --no-cache-dir langchain==0.1.0 langchain-openai==0.0.2 langchain-community==0.0.10 \
     && pip list | grep -i langchain || echo "Warning: langchain not found in pip list"
 
 # Copy project (this will be affected by CACHEBUST)
