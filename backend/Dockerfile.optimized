@@ -18,7 +18,8 @@ ENV PATH="/opt/venv/bin:$PATH"
 COPY requirements-optimized.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements-optimized.txt && \
-    pip list | grep -i langchain || echo "Warning: langchain not found in pip list"
+    pip install --no-cache-dir langchain==0.1.0 langchain-openai==0.0.2 langchain-community==0.0.10 && \
+    pip list | grep -i langchain && echo "✅ langchain installed successfully" || echo "❌ Warning: langchain not found in pip list"
 
 # Remove Python cache files to reduce size
 RUN find /opt/venv -name "*.pyc" -delete && \
