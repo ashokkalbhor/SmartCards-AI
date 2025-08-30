@@ -46,8 +46,17 @@ python-dateutil==2.8.2
 pytz==2023.3
 
 # AI/ML - Core only
-openai==1.3.8
+openai==1.6.1
 tiktoken==0.5.2
+
+# LangChain for SQL Agent
+langchain==0.0.340
+langchain-openai==0.0.2
+langchain-community==0.0.10
+
+# Vector Database
+chromadb==0.4.18
+sentence-transformers==2.2.2
 
 # Web scraping - Lightweight
 requests==2.31.0
