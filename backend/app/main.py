@@ -12,7 +12,14 @@ from app.core.config import settings
 from app.api.v1.api import api_router
 from app.core.database import engine
 from app.core.logging import setup_logging
-from app.core.sql_agent import SQLAgentService
+# Try to import SQL Agent - fail gracefully if not available
+try:
+    from app.core.sql_agent import SQLAgentService
+    SQL_AGENT_AVAILABLE = True
+except ImportError as e:
+    print(f"⚠️ SQL Agent Service not available: {e}")
+    SQL_AGENT_AVAILABLE = False
+    SQLAgentService = None
 
 # Setup logging
 setup_logging()
@@ -88,20 +95,22 @@ async def log_requests(request: Request, call_next):
     
     return response
 
-# SQL Agent startup disabled for minimal deployment
-# @app.on_event("startup")
-# async def startup_event():
-#     """Initialize services on startup"""
-#     global sql_agent_service
-#     
-#     try:
-#         # Initialize SQL Agent Service
-#         sql_agent_service = SQLAgentService()
-#         await sql_agent_service.initialize()
-#         logger.info("✅ SQL Agent Service initialized successfully")
-#     except Exception as e:
-#         logger.error(f"❌ Failed to initialize SQL Agent Service: {e}")
-#         # Continue running - service will be in degraded mode
+@app.on_event("startup")
+async def startup_event():
+    """Initialize services on startup"""
+    global sql_agent_service
+    
+    if SQL_AGENT_AVAILABLE and SQLAgentService:
+        try:
+            # Initialize SQL Agent Service
+            sql_agent_service = SQLAgentService()
+            await sql_agent_service.initialize()
+            logger.info("✅ SQL Agent Service initialized successfully")
+        except Exception as e:
+            logger.error(f"❌ Failed to initialize SQL Agent Service: {e}")
+            # Continue running - service will be in degraded mode
+    else:
+        logger.info("⚠️ SQL Agent Service not available - running in degraded mode")
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
