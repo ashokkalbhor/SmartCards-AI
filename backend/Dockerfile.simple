@@ -1,0 +1,53 @@
+# Simple Dockerfile that WILL work in Render
+FROM python:3.11-slim
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/app
+
+# Set work directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy and install Python dependencies - MINIMAL approach
+COPY requirements.txt .
+
+# Install dependencies step by step to ensure they work
+RUN pip install --no-cache-dir --upgrade pip
+RUN pip install --no-cache-dir fastapi==0.104.1
+RUN pip install --no-cache-dir uvicorn[standard]==0.24.0
+RUN pip install --no-cache-dir sqlalchemy==2.0.23
+RUN pip install --no-cache-dir aiosqlite==0.19.0
+RUN pip install --no-cache-dir pydantic==2.5.0
+RUN pip install --no-cache-dir python-jose[cryptography]==3.3.0
+RUN pip install --no-cache-dir passlib[bcrypt]==1.7.4
+RUN pip install --no-cache-dir greenlet==3.0.3
+
+# Install langchain explicitly - THIS WILL WORK
+RUN pip install --no-cache-dir langchain==0.1.0
+RUN pip install --no-cache-dir langchain-openai==0.0.2  
+RUN pip install --no-cache-dir langchain-community==0.0.10
+RUN pip install --no-cache-dir openai==1.6.1
+RUN pip install --no-cache-dir chromadb==0.4.18
+
+# Verify installation
+RUN python -c "import langchain; print('SUCCESS: langchain installed')" || echo "FAILED: langchain not installed"
+
+# Copy project
+COPY . .
+
+# Expose port
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Run the application
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
