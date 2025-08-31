@@ -7,7 +7,7 @@ Create Date: 2024-01-16 12:00:00.000000
 """
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
+# from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = 'add_card_master_data'
@@ -17,8 +17,8 @@ depends_on = None
 
 def upgrade():
     # Create enum for card tiers
-    card_tier_enum = postgresql.ENUM('basic', 'premium', 'super_premium', 'elite', name='cardtierenum')
-    card_tier_enum.create(op.get_bind())
+    card_tier_enum = sa.String(length=20)
+    # card_tier_enum.create(op.get_bind())
     
     # Create card_master_data table
     op.create_table(
@@ -144,5 +144,5 @@ def downgrade():
     op.drop_table('card_master_data')
     
     # Drop enum
-    card_tier_enum = postgresql.ENUM('basic', 'premium', 'super_premium', 'elite', name='cardtierenum')
-    card_tier_enum.drop(op.get_bind()) 
+    card_tier_enum = sa.String(length=20)
+    # card_tier_enum.drop(op.get_bind()) 

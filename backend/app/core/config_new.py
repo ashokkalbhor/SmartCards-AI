@@ -114,33 +114,92 @@ class Settings(BaseSettings):
     POPULARITY_COVERAGE_WEIGHT: float = 0.4
     POPULARITY_REWARD_WEIGHT: float = 0.4
     POPULARITY_MAX_REWARD_WEIGHT: float = 0.2
+    
     @field_validator("DATABASE_URL", mode="before")
     @classmethod
     def assemble_db_connection(cls, v: Optional[str], values: dict) -> str:
         if isinstance(v, str):
             return v
-        return "sqlite:///./smartcards_ai.db"
+        
+        # For development, use SQLite
+        if os.getenv("ENVIRONMENT", "development") == "development":
+            return "sqlite:///./smartcards_ai.db"
+        
+        # Build from components if not provided (for production)
+        user = os.getenv("DB_USER", "smartcards_user")
+        password = os.getenv("DB_PASSWORD", "smartcards_password")
+        host = os.getenv("DB_HOST", "localhost")
+        port = os.getenv("DB_PORT", "5432")
+        db = os.getenv("DB_NAME", "smartcards_ai")
+        
+        return f"postgresql://{user}:{password}@{host}:{port}/{db}"
     
     @field_validator("ASYNC_DATABASE_URL", mode="before")
     @classmethod
     def assemble_async_db_connection(cls, v: Optional[str], values: dict) -> str:
         if isinstance(v, str):
             return v
-        return "sqlite+aiosqlite:///./smartcards_ai.db"
+        
+        # For development, use SQLite
+        if os.getenv("ENVIRONMENT", "development") == "development":
+            return "sqlite+aiosqlite:///./smartcards_ai.db"
+        
+        # Build from components if not provided (for production)
+        user = os.getenv("DB_USER", "smartcards_user")
+        password = os.getenv("DB_PASSWORD", "smartcards_password")
+        host = os.getenv("DB_HOST", "localhost")
+        port = os.getenv("DB_PORT", "5432")
+        db = os.getenv("DB_NAME", "smartcards_ai")
+        
+        return f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{db}"
     
     @field_validator("TARGET_DATABASE_URL", mode="before")
     @classmethod
     def assemble_target_db_connection(cls, v: Optional[str], values: dict) -> str:
         if isinstance(v, str):
             return v
-        return "sqlite:///./smartcards_ai.db"
+        
+        # Check if TARGET_DATABASE_URL is explicitly set in environment
+        env_target_db = os.getenv("TARGET_DATABASE_URL")
+        if env_target_db:
+            return env_target_db
+        
+        # For development, use SQLite
+        if os.getenv("ENVIRONMENT", "development") == "development":
+            return "sqlite:///./smartcards_ai.db"
+        
+        # Build from components if not provided (for production)
+        user = os.getenv("DB_USER", "smartcards_user")
+        password = os.getenv("DB_PASSWORD", "smartcards_password")
+        host = os.getenv("DB_HOST", "localhost")
+        port = os.getenv("DB_PORT", "5432")
+        db = os.getenv("DB_NAME", "smartcards_ai")
+        
+        return f"postgresql://{user}:{password}@{host}:{port}/{db}"
     
     @field_validator("TARGET_ASYNC_DATABASE_URL", mode="before")
     @classmethod
     def assemble_target_async_db_connection(cls, v: Optional[str], values: dict) -> str:
         if isinstance(v, str):
             return v
-        return "sqlite+aiosqlite:///./smartcards_ai.db"
+        
+        # Check if TARGET_ASYNC_DATABASE_URL is explicitly set in environment
+        env_target_async_db = os.getenv("TARGET_ASYNC_DATABASE_URL")
+        if env_target_async_db:
+            return env_target_async_db
+        
+        # For development, use SQLite
+        if os.getenv("ENVIRONMENT", "development") == "development":
+            return "sqlite+aiosqlite:///./smartcards_ai.db"
+        
+        # Build from components if not provided (for production)
+        user = os.getenv("DB_USER", "smartcards_user")
+        password = os.getenv("DB_PASSWORD", "smartcards_password")
+        host = os.getenv("DB_HOST", "localhost")
+        port = os.getenv("DB_PORT", "5432")
+        db = os.getenv("DB_NAME", "smartcards_ai")
+        
+        return f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{db}"
     
     @field_validator("SECRET_KEY", mode="before")
     @classmethod
