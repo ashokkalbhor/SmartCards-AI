@@ -68,8 +68,8 @@ docker-compose down
 
 ```bash
 cd backend
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+python -m venv venv311
+source venv311/bin/activate  # On Windows: venv311\Scripts\activate
 ```
 
 2. **Install Dependencies**

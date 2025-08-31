@@ -576,7 +576,7 @@ export const cardDocumentsAPI = {
 // SQL Agent API - Now integrated into main backend
 const sqlAgentAPI = axios.create({
   baseURL: process.env.NODE_ENV === 'production' 
-    ? 'https://smartcards-ai-backend.onrender.com/api/v1'  // Production backend URL
+    ? 'https://smartcards-ai-2.onrender.com/api/v1'  // Production backend URL
     : 'http://localhost:8001/api/v1',  // Local backend URL
   headers: {
     'Content-Type': 'application/json',
