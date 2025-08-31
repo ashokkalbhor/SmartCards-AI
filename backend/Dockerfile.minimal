@@ -28,6 +28,7 @@ RUN pip install --no-cache-dir \
 RUN pip install --no-cache-dir openai==1.6.1
 RUN pip install --no-cache-dir tiktoken==0.5.2
 RUN pip install --no-cache-dir tenacity==8.5.0
+RUN pip install --no-cache-dir greenlet==3.0.3
 RUN pip install --no-cache-dir langchain==0.1.0
 RUN pip install --no-cache-dir langchain-openai==0.0.2
 RUN pip install --no-cache-dir langchain-community==0.0.10
