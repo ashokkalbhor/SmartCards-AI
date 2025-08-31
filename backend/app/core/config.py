@@ -159,6 +159,11 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             return v
         
+        # Check if TARGET_DATABASE_URL is explicitly set in environment
+        env_target_db = os.getenv("TARGET_DATABASE_URL")
+        if env_target_db:
+            return env_target_db
+        
         # For development, use SQLite
         if os.getenv("ENVIRONMENT", "development") == "development":
             return "sqlite:///./smartcards_ai.db"
@@ -177,6 +182,11 @@ class Settings(BaseSettings):
     def assemble_target_async_db_connection(cls, v: Optional[str], values: dict) -> str:
         if isinstance(v, str):
             return v
+        
+        # Check if TARGET_ASYNC_DATABASE_URL is explicitly set in environment
+        env_target_async_db = os.getenv("TARGET_ASYNC_DATABASE_URL")
+        if env_target_async_db:
+            return env_target_async_db
         
         # For development, use SQLite
         if os.getenv("ENVIRONMENT", "development") == "development":
