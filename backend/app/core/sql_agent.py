@@ -48,6 +48,8 @@ class SQLAgentService:
             await self.vector_service.load_tuning_data()
 
             # Connect to target business database for SQL queries
+            self.logger.info(f"🔍 TARGET_DATABASE_URL: {settings.TARGET_DATABASE_URL}")
+            self.logger.info(f"🔍 SQL_AGENT_TABLES: {settings.SQL_AGENT_TABLES}")
             self.target_db = SQLDatabase.from_uri(
                 settings.TARGET_DATABASE_URL,
                 include_tables=settings.SQL_AGENT_TABLES,
@@ -55,6 +57,7 @@ class SQLAgentService:
             )
             
             # Connect to service database for chat operations
+            self.logger.info(f"🔍 DATABASE_URL: {settings.DATABASE_URL}")
             self.db = SQLDatabase.from_uri(
                 settings.DATABASE_URL,
                 include_tables=["conversations", "conversation_messages"],
