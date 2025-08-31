@@ -3,9 +3,9 @@ services:
   - type: web
     name: smartcards-ai-backend
     env: docker
-    dockerfilePath: backend/Dockerfile.minimal
+    dockerfilePath: backend/Dockerfile
     plan: free
-    buildCommand: docker build --no-cache -f backend/Dockerfile.minimal backend/
+    buildCommand: docker build --no-cache -f backend/Dockerfile backend/
     envVars:
       - key: SECRET_KEY
         generateValue: true
