@@ -27,6 +27,9 @@ RUN pip install --no-cache-dir --upgrade pip \
 # Copy project (this will be affected by CACHEBUST)
 COPY . .
 
+# Ensure database file exists and is writable
+RUN touch smartcards_ai.db && chmod 664 smartcards_ai.db
+
 # Create non-root user
 RUN adduser --disabled-password --gecos '' appuser \
     && chown -R appuser:appuser /app
@@ -39,5 +42,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Run the application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"] 
+# Run startup script and then the application
+CMD ["sh", "-c", "python startup.py && uvicorn app.main:app --host 0.0.0.0 --port 8000"] 
