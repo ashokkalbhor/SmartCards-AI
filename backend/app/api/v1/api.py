@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import auth, users, credit_cards, merchants, transactions, rewards, recommendations, card_master_data, card_reviews, community, admin, moderator, user_roles, card_documents
+from app.api.v1.endpoints import auth, users, credit_cards, merchants, transactions, rewards, recommendations, card_master_data, card_reviews, community, admin, moderator, user_roles, card_documents, chat
 
 # Try to import SQL Agent - fail gracefully if not available
 try:
@@ -29,6 +29,7 @@ api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
 api_router.include_router(moderator.router, prefix="/moderator", tags=["moderator"])
 api_router.include_router(user_roles.router, prefix="/user-roles", tags=["user-roles"])
 api_router.include_router(card_documents.router, prefix="/card-documents", tags=["card-documents"])
+api_router.include_router(chat.router, prefix="/chat", tags=["chat"])
 # SQL Agent router - only include if available
 if SQL_AGENT_AVAILABLE:
     api_router.include_router(sql_agent.router, prefix="/sql-agent", tags=["sql-agent"])

@@ -4,7 +4,7 @@ import axios from 'axios';
 const api = axios.create({
   baseURL: process.env.NODE_ENV === 'production' 
     ? 'https://smartcards-ai-2.onrender.com/api/v1'  // Render backend URL
-    : 'http://localhost:8001/api/v1',
+    : 'http://localhost:8000/api/v1',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -39,7 +39,7 @@ api.interceptors.response.use(
                   const response = await axios.post(
           process.env.NODE_ENV === 'production' 
             ? 'https://smartcards-ai-2.onrender.com/api/v1/auth/refresh'
-            : 'http://localhost:8001/api/v1/auth/refresh',
+            : 'http://localhost:8000/api/v1/auth/refresh',
           {
             refresh_token: refreshToken,
           }
@@ -439,6 +439,26 @@ export const adminAPI = {
     const response = await api.put(`/admin/card-documents/${documentId}`, reviewData);
     return response.data;
   },
+
+  // Chat access management
+  getChatAccessRequests: async (status?: string) => {
+    const params = status ? `?status_filter=${status}` : '';
+    const response = await api.get(`/admin/chat-access-requests${params}`);
+    return response.data;
+  },
+
+  getChatAccessStats: async () => {
+    const response = await api.get('/admin/chat-access-stats');
+    return response.data;
+  },
+
+  reviewChatAccessRequest: async (requestId: number, status: 'approved' | 'denied', notes?: string) => {
+    const params = new URLSearchParams();
+    params.append('status', status);
+    if (notes) params.append('review_notes', notes);
+    const response = await api.put(`/admin/chat-access-requests/${requestId}?${params.toString()}`);
+    return response.data;
+  },
 };
 
 // Moderator API
@@ -577,7 +597,7 @@ export const cardDocumentsAPI = {
 const sqlAgentAPI = axios.create({
   baseURL: process.env.NODE_ENV === 'production' 
     ? 'https://smartcards-ai-2.onrender.com/api/v1'  // Production backend URL
-    : 'http://localhost:8001/api/v1',  // Local backend URL
+    : 'http://localhost:8000/api/v1',  // Local backend URL
   headers: {
     'Content-Type': 'application/json',
   },
@@ -618,23 +638,36 @@ export const sqlAgentServiceAPI = {
   },
 
   // Chat endpoints
-  createConversation: async (conversationData: { title: string; user_id: number }) => {
-    const response = await sqlAgentAPI.post('/chat/conversations', conversationData);
+  createConversation: async (conversationData: { title: string; conversation_type?: string }) => {
+    const response = await api.post('/chat/conversations', conversationData);
     return response.data;
   },
 
   getConversations: async (user_id: number) => {
-    const response = await sqlAgentAPI.get(`/chat/conversations?user_id=${user_id}`);
+    const response = await api.get(`/chat/conversations?user_id=${user_id}`);
     return response.data;
   },
 
-  getChatHistory: async (conversation_id: string) => {
-    const response = await sqlAgentAPI.get(`/chat/conversations/${conversation_id}/history`);
+  getChatHistory: async (conversation_id: number) => {
+    const response = await api.get(`/chat/conversations/${conversation_id}/history`);
     return response.data;
   },
 
-  deleteConversation: async (conversation_id: string) => {
-    const response = await sqlAgentAPI.delete(`/chat/conversations/${conversation_id}`);
+  deleteConversation: async (conversation_id: number) => {
+    const response = await api.delete(`/chat/conversations/${conversation_id}`);
+    return response.data;
+  },
+
+  saveMessage: async (conversation_id: number, messageData: {
+    role: string;
+    content: string;
+    message_type?: string;
+    tokens_used?: number;
+    model_used?: string;
+    response_time?: number;
+    message_metadata?: any;
+  }) => {
+    const response = await api.post(`/chat/conversations/${conversation_id}/messages`, messageData);
     return response.data;
   },
 
@@ -660,6 +693,17 @@ export const sqlAgentServiceAPI = {
 
   deleteDocument: async (document_id: string) => {
     const response = await sqlAgentAPI.delete(`/documents/${document_id}`);
+    return response.data;
+  },
+
+  // Chat access endpoints
+  requestChatAccess: async () => {
+    const response = await api.post('/chat/request-access');
+    return response.data;
+  },
+
+  getChatAccessStatus: async () => {
+    const response = await api.get('/chat/access-status');
     return response.data;
   },
 };

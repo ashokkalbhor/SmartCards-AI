@@ -1,7 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Send, Bot, User, Zap, Database, Clock, TrendingUp } from 'lucide-react';
+import { Send, Bot, User, Zap, Database, Clock, TrendingUp, History, MessageSquare, AlertCircle } from 'lucide-react';
 import { sqlAgentServiceAPI } from '../../services/api';
+import { useAuth } from '../../hooks/useAuth';
 
 interface EnhancedMessage {
   id: number;
@@ -15,34 +16,34 @@ interface EnhancedMessage {
   explanation?: string;
 }
 
-interface ChatResponse {
-  response: string;
-  sql_query?: string;
-  results?: any;
-  explanation?: string;
-  confidence: number;
-  processing_time: number;
-  source: string;
-  metadata?: any;
+
+interface Conversation {
+  id: number;
+  user_id: number;
+  title: string;
+  conversation_type: string;
+  status: string;
+  message_count: number;
+  created_at: string;
+  updated_at: string;
+  last_message_at: string;
 }
 
 const EnhancedChatBot: React.FC = () => {
-  const [messages, setMessages] = useState<EnhancedMessage[]>([
-    {
-      id: 1,
-      text: "Hello! I'm your SmartCards AI assistant. I can help you with credit card recommendations, spending analysis, and reward optimization. How can I assist you today?",
-      isUser: false,
-      timestamp: new Date(),
-      source: "welcome",
-      confidence: 1.0
-    },
-  ]);
+  const { user } = useAuth();
+  const [messages, setMessages] = useState<EnhancedMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [currentConversationId, setCurrentConversationId] = useState<number | null>(null);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [stats, setStats] = useState({
     totalProcessingTime: 0,
     totalQueries: 0
   });
+  const [hasChatAccess, setHasChatAccess] = useState<boolean | null>(null);
+  const [isRequestingAccess, setIsRequestingAccess] = useState(false);
+  const [accessRequested, setAccessRequested] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -53,8 +54,165 @@ const EnhancedChatBot: React.FC = () => {
     scrollToBottom();
   }, [messages]);
 
+  // Check chat access status
+  const checkChatAccess = useCallback(async () => {
+    if (!user?.id) return;
+    
+    try {
+      const response = await sqlAgentServiceAPI.getChatAccessStatus();
+      setHasChatAccess(response.has_access);
+    } catch (error) {
+      console.error('Error checking chat access:', error);
+      setHasChatAccess(false);
+    }
+  }, [user?.id]);
+
+  const loadChatHistory = useCallback(async () => {
+    if (!user?.id) return;
+    
+    setIsLoadingHistory(true);
+    try {
+      // Get user's conversations
+      const conversationsResponse = await sqlAgentServiceAPI.getConversations(user.id);
+      setConversations(conversationsResponse.conversations || []);
+      
+      // Load the most recent conversation
+      if (conversationsResponse.conversations && conversationsResponse.conversations.length > 0) {
+        const latestConversation = conversationsResponse.conversations[0];
+        setCurrentConversationId(latestConversation.id);
+        
+        // Load messages for the latest conversation
+        const historyResponse = await sqlAgentServiceAPI.getChatHistory(latestConversation.id);
+        if (historyResponse.messages && historyResponse.messages.length > 0) {
+          const formattedMessages = historyResponse.messages.map((msg: any) => ({
+            id: msg.id,
+            text: msg.content,
+            isUser: msg.role === 'user',
+            timestamp: new Date(msg.created_at),
+            source: msg.role === 'user' ? 'user' : 'history',
+            confidence: 1.0,
+            processingTime: msg.response_time,
+            sqlQuery: msg.message_metadata?.sql_query,
+            explanation: msg.message_metadata?.explanation
+          }));
+          
+          setMessages(formattedMessages);
+        } else {
+          // No history, show welcome message
+          setMessages([{
+            id: 1,
+            text: "Hello! I'm your SmartCards AI assistant. I can help you with credit card recommendations, spending analysis, and reward optimization. How can I assist you today?",
+            isUser: false,
+            timestamp: new Date(),
+            source: "welcome",
+            confidence: 1.0
+          }]);
+        }
+      } else {
+        // No conversations, show welcome message
+        setMessages([{
+          id: 1,
+          text: "Hello! I'm your SmartCards AI assistant. I can help you with credit card recommendations, spending analysis, and reward optimization. How can I assist you today?",
+          isUser: false,
+          timestamp: new Date(),
+          source: "welcome",
+          confidence: 1.0
+        }]);
+      }
+    } catch (error) {
+      console.error('Error loading chat history:', error);
+      // Show welcome message on error
+      setMessages([{
+        id: 1,
+        text: "Hello! I'm your SmartCards AI assistant. I can help you with credit card recommendations, spending analysis, and reward optimization. How can I assist you today?",
+        isUser: false,
+        timestamp: new Date(),
+        source: "welcome",
+        confidence: 1.0
+      }]);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  }, [user?.id]);
+
+  // Request chat access
+  const requestChatAccess = async () => {
+    if (!user?.id) return;
+    
+    setIsRequestingAccess(true);
+    try {
+      await sqlAgentServiceAPI.requestChatAccess();
+      setAccessRequested(true);
+      // Show success message
+      setMessages(prev => [...prev, {
+        id: Date.now(),
+        text: "Chat access request submitted successfully! You'll be able to use the chat once approved by an admin.",
+        isUser: false,
+        timestamp: new Date(),
+        source: "system"
+      }]);
+    } catch (error) {
+      console.error('Error requesting chat access:', error);
+      setMessages(prev => [...prev, {
+        id: Date.now(),
+        text: "Failed to submit chat access request. Please try again.",
+        isUser: false,
+        timestamp: new Date(),
+        source: "system"
+      }]);
+    } finally {
+      setIsRequestingAccess(false);
+    }
+  };
+
+  // Load chat history when component mounts or user changes
+  useEffect(() => {
+    if (user?.id) {
+      loadChatHistory();
+      checkChatAccess();
+    } else {
+      // Show welcome message for non-authenticated users
+      setMessages([{
+        id: 1,
+        text: "Hello! I'm your SmartCards AI assistant. I can help you with credit card recommendations, spending analysis, and reward optimization. Please log in to access your personalized chat history and portfolio information.",
+        isUser: false,
+        timestamp: new Date(),
+        source: "welcome",
+        confidence: 1.0
+      }]);
+    }
+  }, [user?.id, loadChatHistory, checkChatAccess]);
+
+  const createNewConversation = async () => {
+    if (!user?.id) return null;
+    
+    try {
+      const response = await sqlAgentServiceAPI.createConversation({
+        title: `Chat ${new Date().toLocaleDateString()}`,
+        conversation_type: "card_recommendation"
+      });
+      setCurrentConversationId(response.id);
+      return response.id;
+    } catch (error) {
+      console.error('Error creating conversation:', error);
+      return null;
+    }
+  };
+
   const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
+
+    // Check if user has chat access
+    if (hasChatAccess === false) {
+      setMessages(prev => [...prev, {
+        id: Date.now(),
+        text: "You don't have chat access yet. Please request access to use the chat feature.",
+        isUser: false,
+        timestamp: new Date(),
+        source: "system"
+      }]);
+      return;
+    }
 
     const userMessage: EnhancedMessage = {
       id: Date.now(),
@@ -68,25 +226,33 @@ const EnhancedChatBot: React.FC = () => {
     setIsTyping(true);
 
     try {
-      // Get basic user data from localStorage or use defaults
-      const userData = {
-        user_id: 1, // Default user ID
-        context: {
-          user_cards: [] // Will be populated by SQL agent from database
-        }
-      };
+      // Use actual user ID instead of hardcoded value
+      const userId = user?.id || 1; // Fallback for non-authenticated users
+      
+      // Create conversation if none exists
+      let conversationId = currentConversationId;
+      if (!conversationId && user?.id) {
+        conversationId = await createNewConversation();
+      }
 
       const response = await sqlAgentServiceAPI.processQuery({
         query: inputMessage,
-        user_id: userData.user_id,
+        user_id: userId,
+        context: {
+          user_cards: [], // Will be populated by SQL agent from database
+          conversation_id: conversationId
+        },
         include_sql: true,
         include_explanation: true,
         max_results: 10
       });
 
+      // Clean and format the response
+      const cleanedResponse = cleanResponseText(response.response);
+
       const botResponse: EnhancedMessage = {
         id: Date.now() + 1,
-        text: response.response,
+        text: cleanedResponse,
         isUser: false,
         timestamp: new Date(),
         source: response.source,
@@ -97,6 +263,34 @@ const EnhancedChatBot: React.FC = () => {
       };
 
       setMessages(prev => [...prev, botResponse]);
+
+      // Save messages to database if user is authenticated
+      if (user?.id && conversationId) {
+        try {
+          // Save user message
+          await sqlAgentServiceAPI.saveMessage(conversationId, {
+            role: 'user',
+            content: inputMessage,
+            message_type: 'text'
+          });
+
+          // Save bot response
+          await sqlAgentServiceAPI.saveMessage(conversationId, {
+            role: 'assistant',
+            content: response.response,
+            message_type: 'text',
+            response_time: response.processing_time,
+            message_metadata: {
+              sql_query: response.sql_query,
+              explanation: response.explanation,
+              confidence: response.confidence
+            }
+          });
+        } catch (saveError) {
+          console.error('Error saving messages:', saveError);
+          // Don't fail the entire operation if saving fails
+        }
+      }
 
       // Update stats
       setStats(prev => ({
@@ -120,6 +314,25 @@ const EnhancedChatBot: React.FC = () => {
     }
   };
 
+  // Clean response text to remove raw JSON and improve formatting
+  const cleanResponseText = (text: string): string => {
+    if (!text) return '';
+    
+    // Remove raw JSON-like strings that appear in responses
+    let cleaned = text.replace(/I found \d+ results:.*?\{.*?\}/gs, '');
+    
+    // Remove any remaining raw JSON patterns
+    cleaned = cleaned.replace(/\{.*?"result".*?\}/gs, '');
+    
+    // Clean up multiple newlines
+    cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
+    
+    // Remove trailing whitespace
+    cleaned = cleaned.trim();
+    
+    return cleaned;
+  };
+
   const getSourceIcon = (source: string) => {
     switch (source) {
       case 'cache':
@@ -128,6 +341,8 @@ const EnhancedChatBot: React.FC = () => {
         return <Bot className="h-3 w-3" />;
       case 'welcome':
         return <Bot className="h-3 w-3" />;
+      case 'history':
+        return <History className="h-3 w-3" />;
       case 'error':
         return <Zap className="h-3 w-3" />;
       default:
@@ -143,6 +358,8 @@ const EnhancedChatBot: React.FC = () => {
         return 'text-purple-600';
       case 'welcome':
         return 'text-gray-600';
+      case 'history':
+        return 'text-blue-600';
       case 'error':
         return 'text-red-600';
       default:
@@ -158,6 +375,8 @@ const EnhancedChatBot: React.FC = () => {
         return 'AI';
       case 'welcome':
         return 'Welcome';
+      case 'history':
+        return 'History';
       case 'error':
         return 'Error';
       default:
@@ -271,6 +490,49 @@ const EnhancedChatBot: React.FC = () => {
     });
   };
 
+  // Render chat access request UI
+  const renderChatAccessRequest = () => (
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 h-full min-h-[600px] flex items-center justify-center">
+      <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-8 max-w-md text-center">
+        <AlertCircle className="h-16 w-16 text-yellow-600 dark:text-yellow-400 mx-auto mb-4" />
+        <h3 className="text-xl font-semibold text-yellow-800 dark:text-yellow-200 mb-3">
+          Chat Access Required
+        </h3>
+        <p className="text-yellow-700 dark:text-yellow-300 mb-6">
+          You need admin approval to use the chat feature. Click below to request access.
+        </p>
+        <button
+          onClick={requestChatAccess}
+          disabled={isRequestingAccess || accessRequested}
+          className="bg-yellow-600 hover:bg-yellow-700 disabled:bg-yellow-400 text-white px-8 py-3 rounded-lg font-medium transition-colors"
+        >
+          {isRequestingAccess ? 'Requesting...' : accessRequested ? 'Request Submitted' : 'Request Chat Access'}
+        </button>
+        {accessRequested && (
+          <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-4">
+            Your request has been submitted. You'll be notified once approved.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+
+  if (isLoadingHistory) {
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 h-full min-h-[600px] flex items-center justify-center">
+        <div className="flex items-center space-x-2">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600"></div>
+          <span className="text-gray-600 dark:text-gray-400">Loading chat history...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Show chat access request if user doesn't have access
+  if (hasChatAccess === false) {
+    return renderChatAccessRequest();
+  }
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 h-full min-h-[600px] flex flex-col">
       {/* Header */}
@@ -281,7 +543,9 @@ const EnhancedChatBot: React.FC = () => {
           </div>
           <div>
             <h3 className="font-semibold text-gray-900 dark:text-white">SmartCards AI Assistant</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Ask me about your cards and spending</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {user ? `Welcome back, ${user.first_name || user.email}!` : 'Ask me about your cards and spending'}
+            </p>
           </div>
         </div>
         
@@ -295,6 +559,12 @@ const EnhancedChatBot: React.FC = () => {
             <Clock className="h-3 w-3" />
             <span>{(stats.totalProcessingTime / 1000).toFixed(1)}s</span>
           </div>
+          {conversations.length > 0 && (
+            <div className="flex items-center space-x-1">
+              <MessageSquare className="h-3 w-3" />
+              <span>{conversations.length} chats</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -379,19 +649,20 @@ const EnhancedChatBot: React.FC = () => {
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Ask me about your cards, spending, or rewards..."
-            className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+            placeholder={user ? "Ask me about your cards, spending, or rewards..." : "Please log in to access personalized features..."}
+            disabled={!user}
+            className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed"
           />
           <button
             onClick={handleSendMessage}
-            disabled={!inputMessage.trim() || isTyping}
+            disabled={!inputMessage.trim() || isTyping || !user}
             className="px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white rounded-lg transition-colors flex items-center space-x-2"
           >
             <Send className="h-4 w-4" />
           </button>
         </div>
         <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
-          Try: "Which card is best for Amazon?" or "Show my credit cards"
+          {user ? 'Try: "Which card is best for Amazon?" or "Show my credit cards"' : 'Log in to access your personalized chat history and portfolio'}
         </p>
       </div>
     </div>

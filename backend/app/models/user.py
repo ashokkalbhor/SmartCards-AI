@@ -18,6 +18,7 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     is_verified = Column(Boolean, default=False)
     is_premium = Column(Boolean, default=False)
+    chat_access_granted = Column(Boolean, default=False)
     
     # Profile information
     avatar_url = Column(String(500), nullable=True)
@@ -62,6 +63,7 @@ class User(Base):
     edit_suggestions = relationship("EditSuggestion", foreign_keys="EditSuggestion.user_id", back_populates="user", cascade="all, delete-orphan")
     audit_logs = relationship("AuditLog", back_populates="user", cascade="all, delete-orphan")
     card_documents = relationship("CardDocument", foreign_keys="CardDocument.user_id", back_populates="user", cascade="all, delete-orphan")
+    chat_access_requests = relationship("ChatAccessRequest", foreign_keys="ChatAccessRequest.user_id", back_populates="user", cascade="all, delete-orphan")
     
     def __repr__(self):
         return f"<User(id={self.id}, email='{self.email}')>"

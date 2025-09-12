@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
   Users,
@@ -11,7 +11,8 @@ import {
   BarChart3,
   Eye,
   Edit,
-  ExternalLink
+  ExternalLink,
+  MessageSquare
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { adminAPI } from '../../services/api';
@@ -42,6 +43,25 @@ interface AdminStats {
     timestamp: string;
     summary: string;
   }>;
+}
+
+interface ChatAccessRequest {
+  id: number;
+  user_id: number;
+  user_name: string;
+  user_email: string;
+  status: string;
+  requested_at: string;
+  reviewed_at?: string;
+  reviewed_by?: number;
+  review_notes?: string;
+}
+
+interface ChatAccessStats {
+  total_requests: number;
+  pending_requests: number;
+  approved_requests: number;
+  denied_requests: number;
 }
 
 interface UserInfo {
@@ -101,12 +121,11 @@ const AdminDashboardPage: React.FC = () => {
   const [moderatorRequests, setModeratorRequests] = useState<ModeratorRequest[]>([]);
   const [editSuggestions, setEditSuggestions] = useState<EditSuggestion[]>([]);
   const [cardDocuments, setCardDocuments] = useState<CardDocument[]>([]);
+  const [chatAccessRequests, setChatAccessRequests] = useState<ChatAccessRequest[]>([]);
+  const [chatAccessStats, setChatAccessStats] = useState<ChatAccessStats | null>(null);
+  const [chatAccessFilter, setChatAccessFilter] = useState<string>('pending');
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'moderators' | 'suggestions' | 'documents'>('overview');
-
-  useEffect(() => {
-    fetchAdminData();
-  }, []);
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'moderators' | 'suggestions' | 'documents' | 'chat-approvals'>('overview');
 
   const fetchAdminData = async () => {
     try {
@@ -128,6 +147,45 @@ const AdminDashboardPage: React.FC = () => {
       console.error('Error fetching admin data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchChatAccessRequests = useCallback(async () => {
+    try {
+      const response = await adminAPI.getChatAccessRequests(chatAccessFilter);
+      setChatAccessRequests(response);
+    } catch (error) {
+      console.error('Error fetching chat access requests:', error);
+    }
+  }, [chatAccessFilter]);
+
+  const fetchChatAccessStats = useCallback(async () => {
+    try {
+      const response = await adminAPI.getChatAccessStats();
+      setChatAccessStats(response);
+    } catch (error) {
+      console.error('Error fetching chat access stats:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAdminData();
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'chat-approvals') {
+      fetchChatAccessRequests();
+      fetchChatAccessStats();
+    }
+  }, [activeTab, chatAccessFilter, fetchChatAccessRequests, fetchChatAccessStats]);
+
+  const handleChatAccessReview = async (requestId: number, status: 'approved' | 'denied', notes?: string) => {
+    try {
+      await adminAPI.reviewChatAccessRequest(requestId, status, notes);
+      await fetchChatAccessRequests();
+      await fetchChatAccessStats();
+    } catch (error) {
+      console.error('Error reviewing chat access request:', error);
     }
   };
 
@@ -293,7 +351,8 @@ const AdminDashboardPage: React.FC = () => {
               { id: 'users', label: 'Users', icon: Users },
               { id: 'moderators', label: 'Moderator Requests', icon: Shield },
               { id: 'suggestions', label: 'Edit Suggestions', icon: FileText },
-              { id: 'documents', label: 'Card Documents', icon: FileText }
+              { id: 'documents', label: 'Card Documents', icon: FileText },
+              { id: 'chat-approvals', label: 'Chat Approvals', icon: MessageSquare }
             ].map((tab) => {
               const Icon = tab.icon;
               return (
@@ -623,6 +682,122 @@ const AdminDashboardPage: React.FC = () => {
                   <div className="text-center py-8">
                     <FileText className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
                     <p className="text-gray-500 dark:text-gray-400">No card documents found.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Chat Approvals Tab */}
+          {activeTab === 'chat-approvals' && (
+            <div className="p-6">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Chat Access Requests</h2>
+              
+              {/* Stats Cards */}
+              {chatAccessStats && (
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                  <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Requests</p>
+                        <p className="text-2xl font-bold text-gray-900 dark:text-white">{chatAccessStats.total_requests}</p>
+                      </div>
+                      <FileText className="h-8 w-8 text-blue-600" />
+                    </div>
+                  </div>
+                  <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Pending</p>
+                        <p className="text-2xl font-bold text-yellow-600">{chatAccessStats.pending_requests}</p>
+                      </div>
+                      <Clock className="h-8 w-8 text-yellow-600" />
+                    </div>
+                  </div>
+                  <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Approved</p>
+                        <p className="text-2xl font-bold text-green-600">{chatAccessStats.approved_requests}</p>
+                      </div>
+                      <CheckCircle className="h-8 w-8 text-green-600" />
+                    </div>
+                  </div>
+                  <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Denied</p>
+                        <p className="text-2xl font-bold text-red-600">{chatAccessStats.denied_requests}</p>
+                      </div>
+                      <XCircle className="h-8 w-8 text-red-600" />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Filter Tabs */}
+              <div className="flex space-x-1 bg-gray-100 dark:bg-gray-700 p-1 rounded-lg mb-6">
+                {['pending', 'approved', 'denied'].map((status) => (
+                  <button
+                    key={status}
+                    onClick={() => setChatAccessFilter(status)}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                      chatAccessFilter === status
+                        ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                    }`}
+                  >
+                    {status.charAt(0).toUpperCase() + status.slice(1)}
+                  </button>
+                ))}
+              </div>
+
+              {/* Requests List */}
+              <div className="space-y-4">
+                {chatAccessRequests.map((request) => (
+                  <div key={request.id} className="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3">
+                          <div>
+                            <h4 className="font-medium text-gray-900 dark:text-white">{request.user_name}</h4>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">{request.user_email}</p>
+                          </div>
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                            request.status === 'approved' ? 'bg-green-100 text-green-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {request.status}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                          Requested: {new Date(request.requested_at).toLocaleString()}
+                        </p>
+                      </div>
+                      {request.status === 'pending' && (
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => handleChatAccessReview(request.id, 'approved')}
+                            className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm font-medium"
+                          >
+                            Approve
+                          </button>
+                          <button
+                            onClick={() => handleChatAccessReview(request.id, 'denied')}
+                            className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm font-medium"
+                          >
+                            Deny
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {chatAccessRequests.length === 0 && (
+                  <div className="text-center py-8">
+                    <MessageSquare className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+                    <p className="text-gray-500 dark:text-gray-400">No chat access requests found.</p>
                   </div>
                 )}
               </div>

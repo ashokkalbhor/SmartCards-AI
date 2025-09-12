@@ -12,6 +12,7 @@ from app.models.edit_suggestion import EditSuggestion
 from app.models.card_document import CardDocument
 from app.models.audit_log import AuditLog
 from app.models.card_master_data import CardMasterData, CardSpendingCategory, CardMerchantReward
+from app.models.chat_access_request import ChatAccessRequest
 from app.schemas.user_role import (
     UserRoleCreate, UserRoleUpdate, UserRoleResponse,
     ModeratorRequestCreate, ModeratorRequestUpdate, ModeratorRequestResponse,
@@ -19,6 +20,7 @@ from app.schemas.user_role import (
 )
 from app.schemas.edit_suggestion import EditSuggestionResponse, EditSuggestionStats, EditSuggestionUpdate
 from app.schemas.card_document import CardDocumentResponse, CardDocumentStats, CardDocumentUpdate
+from app.schemas.chat_schemas import ChatAccessRequestListResponse
 from datetime import datetime, timedelta
 import json
 
@@ -574,4 +576,86 @@ def get_admin_stats(db: Session = Depends(get_db), current_user: User = Depends(
             }
             for log in recent_audit_logs
         ]
+    }
+
+
+@router.get("/chat-access-requests", response_model=List[ChatAccessRequestListResponse])
+def get_chat_access_requests(
+    status_filter: Optional[str] = Query(None, regex="^(pending|approved|denied)$"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """Get all chat access requests"""
+    query = db.query(ChatAccessRequest).join(User, ChatAccessRequest.user_id == User.id)
+    
+    if status_filter:
+        query = query.filter(ChatAccessRequest.status == status_filter)
+    
+    requests = query.order_by(desc(ChatAccessRequest.requested_at)).all()
+    
+    return [
+        ChatAccessRequestListResponse(
+            id=req.id,
+            user_id=req.user_id,
+            user_name=f"{req.user.first_name or ''} {req.user.last_name or ''}".strip() or "Unknown",
+            user_email=req.user.email,
+            status=req.status,
+            requested_at=req.requested_at,
+            reviewed_at=req.reviewed_at,
+            reviewed_by=req.reviewed_by,
+            review_notes=req.review_notes
+        )
+        for req in requests
+    ]
+
+
+@router.put("/chat-access-requests/{request_id}")
+def review_chat_access_request(
+    request_id: int,
+    status: str = Query(..., regex="^(approved|denied)$"),
+    review_notes: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """Approve or deny a chat access request"""
+    request = db.query(ChatAccessRequest).filter(ChatAccessRequest.id == request_id).first()
+    if not request:
+        raise HTTPException(status_code=404, detail="Chat access request not found")
+    
+    if request.status != "pending":
+        raise HTTPException(status_code=400, detail="Request has already been reviewed")
+    
+    # Update request
+    request.status = status
+    request.reviewed_at = datetime.utcnow()
+    request.reviewed_by = current_user.id
+    request.review_notes = review_notes
+    
+    # If approved, grant chat access to user
+    if status == "approved":
+        user = db.query(User).filter(User.id == request.user_id).first()
+        if user:
+            user.chat_access_granted = True
+    
+    db.commit()
+    
+    return {"message": f"Chat access request {status} successfully"}
+
+
+@router.get("/chat-access-stats")
+def get_chat_access_stats(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """Get chat access statistics"""
+    total_requests = db.query(ChatAccessRequest).count()
+    pending_requests = db.query(ChatAccessRequest).filter(ChatAccessRequest.status == "pending").count()
+    approved_requests = db.query(ChatAccessRequest).filter(ChatAccessRequest.status == "approved").count()
+    denied_requests = db.query(ChatAccessRequest).filter(ChatAccessRequest.status == "denied").count()
+    
+    return {
+        "total_requests": total_requests,
+        "pending_requests": pending_requests,
+        "approved_requests": approved_requests,
+        "denied_requests": denied_requests
     } 
