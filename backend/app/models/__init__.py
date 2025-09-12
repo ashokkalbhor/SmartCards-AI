@@ -11,6 +11,7 @@ from .user_role import UserRole, ModeratorRequest
 from .edit_suggestion import EditSuggestion
 from .audit_log import AuditLog
 from .card_document import CardDocument
+from .chat_access_request import ChatAccessRequest
 
 __all__ = [
     "User",
@@ -35,5 +36,6 @@ __all__ = [
     "ModeratorRequest",
     "EditSuggestion",
     "AuditLog",
-    "CardDocument"
+    "CardDocument",
+    "ChatAccessRequest"
 ] 
