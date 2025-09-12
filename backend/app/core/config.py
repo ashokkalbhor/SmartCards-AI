@@ -23,14 +23,7 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379"
     
     # CORS
-    ALLOWED_ORIGINS: List[str] = [
-        "http://localhost:3000",
-        "http://localhost:3001",
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:3001",
-        "https://smartcards-ai-frontend.onrender.com",
-        "https://*.onrender.com",
-    ]
+    ALLOWED_ORIGINS: str = "http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://127.0.0.1:3001,https://smartcards-ai-frontend.onrender.com,https://smartcards-ai-backend.onrender.com"
     
     # Allowed Hosts
     ALLOWED_HOSTS: List[str] = ["*"]
@@ -149,12 +142,13 @@ class Settings(BaseSettings):
             raise ValueError("SECRET_KEY must be set in production")
         return v
     
-    @field_validator("ALLOWED_ORIGINS", mode="before")
+    @field_validator("ALLOWED_ORIGINS", mode="after")
     @classmethod
-    def validate_origins(cls, v: List[str]) -> List[str]:
-        if not v:
-            return ["http://localhost:3000"]
-        return v
+    def validate_origins(cls, v: str) -> List[str]:
+        # Split by comma and strip whitespace
+        if isinstance(v, str):
+            return [origin.strip() for origin in v.split(",") if origin.strip()]
+        return ["http://localhost:3000"]
     
     model_config = {
         "env_file": ".env",
@@ -172,8 +166,13 @@ if settings.ENVIRONMENT == "production":
     settings.ALLOWED_HOSTS = [
         "smartcardsai.com",
         "www.smartcardsai.com",
-        "api.smartcardsai.com"
+        "api.smartcardsai.com",
+        "smartcards-ai-2.onrender.com",
+        "smartcards-ai-frontend.onrender.com"
     ]
+    # Ensure production CORS origins are properly set
+    if "https://smartcards-ai-frontend.onrender.com" not in settings.ALLOWED_ORIGINS:
+        settings.ALLOWED_ORIGINS.append("https://smartcards-ai-frontend.onrender.com")
 elif settings.ENVIRONMENT == "staging":
     settings.DEBUG = False
     settings.LOG_LEVEL = "INFO" 

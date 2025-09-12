@@ -1,7 +1,7 @@
 services:
   # Backend Service (Integrated with SQL Agent)
   - type: web
-    name: smartcards-ai-backend
+    name: smartcards-ai-2
     env: docker
     dockerfilePath: backend/Dockerfile
     plan: free
@@ -29,6 +29,8 @@ services:
         value: sqlite:///./smartcards_ai.db
       - key: TARGET_ASYNC_DATABASE_URL
         value: sqlite+aiosqlite:///./smartcards_ai.db
+      - key: ALLOWED_ORIGINS
+        value: https://smartcards-ai-frontend.onrender.com
     healthCheckPath: /health
     autoDeploy: true
 
