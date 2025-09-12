@@ -38,4 +38,4 @@ __all__ = [
     "AuditLog",
     "CardDocument",
     "ChatAccessRequest"
-] 
+]
