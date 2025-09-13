@@ -55,9 +55,14 @@ const HomePage: React.FC = () => {
                 <span>Start Optimizing</span>
                 <ArrowRight className="h-5 w-5" />
               </Link>
-              <button className="border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 px-8 py-4 rounded-lg text-lg font-semibold transition-colors">
+              <a
+                href="https://youtu.be/mrgtCuA9jck?si=maURPUhs3m8z4hzN"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 px-8 py-4 rounded-lg text-lg font-semibold transition-colors inline-block text-center"
+              >
                 Watch Demo
-              </button>
+              </a>
             </div>
           </motion.div>
         </div>
