@@ -1,0 +1,268 @@
+banks:
+  hdfc:
+    name: "HDFC Bank"
+    base_url: "https://www.hdfcbank.com"
+    cards:
+      - id: "regalia_gold"
+        name: "HDFC Regalia Gold"
+        type: "premium"
+        network: "Visa"
+        documents:
+          # PDF URL - Terms and Conditions
+          - type: "pdf_url"
+            url: "https://www.hdfcbank.com/content/dam/hdfcbank/htdocs/pdfs/Terms-and-Conditions-Credit-Cards.pdf"
+            description: "Terms and Conditions"
+            document_category: "terms"
+          
+          # Web Page - Features and Benefits
+          - type: "web_page"
+            url: "https://www.hdfcbank.com/personal/pay/cards/credit-cards/regalia-gold"
+            description: "Card Features and Benefits"
+            document_category: "features"
+            scraping_config:
+              selectors: 
+                - ".card-features"
+                - ".benefits-section"
+                - ".reward-structure"
+                - ".card-details"
+              exclude_selectors:
+                - ".navigation"
+                - ".footer"
+                - ".header"
+                - ".breadcrumbs"
+              javascript_required: false
+          
+          # Manual Upload Example (uncomment and provide file path if needed)
+          # - type: "upload"
+          #   source_type: "pdf"
+          #   file_path: "app/data/documents/uploads/hdfc_regalia_gold_additional_terms.pdf"
+          #   description: "Additional Terms Document"
+          #   document_category: "terms"
+
+      - id: "millennia"
+        name: "HDFC Millennia"
+        type: "lifestyle"
+        network: "Visa"
+        documents:
+          - type: "pdf_url"
+            url: "https://www.hdfcbank.com/content/dam/hdfcbank/htdocs/pdfs/Terms-and-Conditions-Credit-Cards.pdf"
+            description: "Terms and Conditions"
+            document_category: "terms"
+          
+          - type: "web_page"
+            url: "https://www.hdfcbank.com/personal/pay/cards/credit-cards/millennia"
+            description: "Card Features"
+            document_category: "features"
+            scraping_config:
+              selectors: [".card-benefits", ".reward-structure", ".features-list"]
+              exclude_selectors: [".navigation", ".footer"]
+
+      - id: "diners_club_black"
+        name: "HDFC Diners Club Black"
+        type: "super_premium"
+        network: "Diners Club"
+        documents:
+          - type: "web_page"
+            url: "https://www.hdfcbank.com/personal/pay/cards/credit-cards/diners-club-black"
+            description: "Premium Card Features"
+            document_category: "features"
+            scraping_config:
+              selectors: [".premium-benefits", ".reward-points", ".lifestyle-benefits"]
+
+  sbi:
+    name: "State Bank of India"
+    base_url: "https://www.sbi.co.in"
+    cards:
+      - id: "elite"
+        name: "SBI Elite"
+        type: "premium"
+        network: "Visa"
+        documents:
+          - type: "pdf_url"
+            url: "https://www.sbi.co.in/documents/17826/815860/Elite+Card+Terms+and+Conditions.pdf"
+            description: "Terms and Conditions"
+            document_category: "terms"
+          
+          - type: "web_page"
+            url: "https://www.sbi.co.in/personal-banking/cards/credit-cards/elite"
+            description: "Card Features"
+            document_category: "features"
+            scraping_config:
+              selectors: [".card-features", ".benefits-section"]
+              exclude_selectors: [".navigation", ".footer"]
+
+      - id: "cashback"
+        name: "SBI Cashback"
+        type: "cashback"
+        network: "Visa"
+        documents:
+          - type: "web_page"
+            url: "https://www.sbi.co.in/personal-banking/cards/credit-cards/cashback"
+            description: "Cashback Card Features"
+            document_category: "features"
+            scraping_config:
+              selectors: [".cashback-benefits", ".reward-structure"]
+
+  icici:
+    name: "ICICI Bank"
+    base_url: "https://www.icicibank.com"
+    cards:
+      - id: "sapphiro"
+        name: "ICICI Sapphiro"
+        type: "premium"
+        network: "Visa"
+        documents:
+          - type: "pdf_url"
+            url: "https://www.icicibank.com/content/dam/icicibank/personal/cards/credit-card/sapphiro/sapphiro-terms-conditions.pdf"
+            description: "Terms and Conditions"
+            document_category: "terms"
+          
+          - type: "web_page"
+            url: "https://www.icicibank.com/personal-banking/cards/credit-cards/sapphiro-credit-card"
+            description: "Premium Card Features"
+            document_category: "features"
+            scraping_config:
+              selectors: [".card-benefits", ".reward-points", ".premium-features"]
+
+      - id: "amazon_pay"
+        name: "ICICI Amazon Pay"
+        type: "co_branded"
+        network: "Visa"
+        documents:
+          - type: "web_page"
+            url: "https://www.icicibank.com/personal-banking/cards/credit-cards/amazon-pay-credit-card"
+            description: "Amazon Pay Card Features"
+            document_category: "features"
+            scraping_config:
+              selectors: [".amazon-benefits", ".cashback-structure"]
+
+  axis:
+    name: "Axis Bank"
+    base_url: "https://www.axisbank.com"
+    cards:
+      - id: "magnus"
+        name: "Axis Magnus"
+        type: "premium"
+        network: "Mastercard"
+        documents:
+          - type: "pdf_url"
+            url: "https://www.axisbank.com/docs/default-source/default-document-library/credit-cards/magnus-terms-conditions.pdf"
+            description: "Terms and Conditions"
+            document_category: "terms"
+          
+          - type: "web_page"
+            url: "https://www.axisbank.com/retail/cards/credit-card/magnus-credit-card"
+            description: "Magnus Card Features"
+            document_category: "features"
+            scraping_config:
+              selectors: [".magnus-benefits", ".reward-structure", ".premium-features"]
+              javascript_required: true
+
+      - id: "flipkart"
+        name: "Axis Flipkart"
+        type: "co_branded"
+        network: "Mastercard"
+        documents:
+          - type: "web_page"
+            url: "https://www.axisbank.com/retail/cards/credit-card/flipkart-axis-bank-credit-card"
+            description: "Flipkart Card Benefits"
+            document_category: "features"
+            scraping_config:
+              selectors: [".flipkart-benefits", ".shopping-rewards"]
+
+  kotak:
+    name: "Kotak Mahindra Bank"
+    base_url: "https://www.kotak.com"
+    cards:
+      - id: "regalia"
+        name: "Kotak Regalia Gold"
+        type: "premium"
+        network: "Visa"
+        documents:
+          - type: "web_page"
+            url: "https://www.kotak.com/en/personal-banking/cards/credit-cards/regalia-gold-credit-card.html"
+            description: "Regalia Gold Features"
+            document_category: "features"
+            scraping_config:
+              selectors: [".card-benefits", ".reward-program"]
+
+  yes_bank:
+    name: "YES Bank"
+    base_url: "https://www.yesbank.in"
+    cards:
+      - id: "marquee"
+        name: "YES Bank Marquee"
+        type: "premium"
+        network: "Mastercard"
+        documents:
+          - type: "web_page"
+            url: "https://www.yesbank.in/personal-banking/cards/credit-cards/marquee-credit-card"
+            description: "Marquee Card Features"
+            document_category: "features"
+            scraping_config:
+              selectors: [".marquee-benefits", ".luxury-features"]
+
+# Configuration for processing behavior
+processing_config:
+  # Retry settings
+  max_retries: 3
+  retry_delay: 2  # seconds
+  
+  # Timeout settings
+  request_timeout: 30  # seconds
+  selenium_timeout: 15  # seconds
+  
+  # Content filtering
+  min_content_length: 100  # minimum characters for meaningful content
+  max_content_length: 100000  # maximum characters to process
+  
+  # Chunking settings
+  chunk_size: 1000  # characters per chunk
+  chunk_overlap: 200  # characters overlap between chunks
+  
+  # Rate limiting
+  delay_between_requests: 1  # seconds
+  max_concurrent_requests: 3
+  
+  # User agent rotation
+  user_agents:
+    - "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+    - "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+    - "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+
+# Merchant mapping for better recommendations
+merchant_categories:
+  ecommerce:
+    - "amazon"
+    - "flipkart"
+    - "myntra"
+    - "ajio"
+    - "nykaa"
+  
+  dining:
+    - "swiggy"
+    - "zomato"
+    - "uber eats"
+    - "dominos"
+    - "pizza hut"
+  
+  travel:
+    - "makemytrip"
+    - "goibibo"
+    - "booking.com"
+    - "uber"
+    - "ola"
+  
+  fuel:
+    - "indian oil"
+    - "bharat petroleum"
+    - "reliance"
+    - "shell"
+    - "hp"
+  
+  grocery:
+    - "bigbasket"
+    - "grofers"
+    - "amazon fresh"
+    - "jiomart"
+    - "dmart" 

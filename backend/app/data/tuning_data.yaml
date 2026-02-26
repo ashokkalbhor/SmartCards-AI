@@ -1,0 +1,40 @@
+tuning_examples:
+  - question: "Which is the best card for Airtel spends?"
+    sql_query: "SELECT c.card_name, c.bank_name, cmr.reward_rate FROM card_master_data c JOIN card_merchant_rewards cmr ON c.id = cmr.card_id JOIN merchants m ON cmr.merchant_id = m.id WHERE m.merchant_name ILIKE '%airtel%' ORDER BY cmr.reward_rate DESC LIMIT 5;"
+    answer: "For Airtel spends, the best cards are: 1. HDFC Regalia (5% cashback), 2. ICICI Amazon Pay (3% cashback), 3. Axis Flipkart (2% cashback). These cards offer the highest reward rates specifically for Airtel transactions."
+    category: "telecom_spends"
+    
+  - question: "Which is the best card in the market for National Pension Scheme payments?"
+    sql_query: "SELECT c.card_name, c.bank_name, c.reward_rate FROM card_master_data c WHERE c.category = 'government' OR c.category = 'utility' ORDER BY c.reward_rate DESC LIMIT 5;"
+    answer: "For National Pension Scheme payments, government category cards typically offer the best rewards. Top options include: 1. SBI SimplyCLICK (10% cashback), 2. HDFC Millennia (5% cashback), 3. ICICI Coral (3% cashback)."
+    category: "government_payments"
+    
+  - question: "What's the best card for Amazon purchases?"
+    sql_query: "SELECT c.card_name, c.bank_name, cmr.reward_rate FROM card_master_data c JOIN card_merchant_rewards cmr ON c.id = cmr.card_id JOIN merchants m ON cmr.merchant_id = m.id WHERE m.merchant_name ILIKE '%amazon%' ORDER BY cmr.reward_rate DESC LIMIT 5;"
+    answer: "For Amazon purchases, the best cards are: 1. Amazon Pay ICICI (5% cashback on Amazon), 2. HDFC Millennia (5% cashback on Amazon), 3. Axis Flipkart (5% cashback on Flipkart). Always check for specific Amazon offers and category exclusions."
+    category: "ecommerce"
+    
+  - question: "Which card gives the best rewards for fuel spends?"
+    sql_query: "SELECT c.card_name, c.bank_name, cmr.reward_rate FROM card_master_data c JOIN card_merchant_rewards cmr ON c.id = cmr.card_id JOIN merchants m ON cmr.merchant_id = m.id WHERE m.merchant_name ILIKE '%hpcl%' OR m.merchant_name ILIKE '%bpcl%' OR m.merchant_name ILIKE '%iocl%' ORDER BY cmr.reward_rate DESC LIMIT 5;"
+    answer: "For fuel spends, the best cards are: 1. HPCL HDFC Bank (7.5% cashback on HPCL), 2. BPCL SBI (4.25% cashback on BPCL), 3. Indian Oil HDFC (4% cashback on IOCL). These cards offer category-specific rewards for fuel transactions."
+    category: "fuel_spends"
+    
+  - question: "What's the best card for dining and restaurants?"
+    sql_query: "SELECT c.card_name, c.bank_name, c.reward_rate FROM card_master_data c WHERE c.category = 'dining' OR c.category = 'restaurant' ORDER BY c.reward_rate DESC LIMIT 5;"
+    answer: "For dining and restaurants, the best cards are: 1. HDFC Regalia (4X reward points), 2. ICICI Sapphiro (4X reward points), 3. Axis Magnus (12X reward points). These cards offer accelerated rewards for dining category spends."
+    category: "dining"
+    
+  - question: "Which card is best for international travel?"
+    sql_query: "SELECT c.card_name, c.bank_name, c.reward_rate FROM card_master_data c WHERE c.category = 'international' OR c.category = 'travel' ORDER BY c.reward_rate DESC LIMIT 5;"
+    answer: "For international travel, the best cards are: 1. HDFC Regalia (4X reward points on international spends), 2. ICICI Sapphiro (4X reward points), 3. Axis Magnus (12X reward points). These cards offer zero forex markup and accelerated rewards for international transactions."
+    category: "international_travel"
+    
+  - question: "What's the best card for grocery shopping?"
+    sql_query: "SELECT c.card_name, c.bank_name, cmr.reward_rate FROM card_master_data c JOIN card_merchant_rewards cmr ON c.id = cmr.card_id JOIN merchants m ON cmr.merchant_id = m.id WHERE m.merchant_name ILIKE '%grocery%' OR m.merchant_name ILIKE '%supermarket%' ORDER BY cmr.reward_rate DESC LIMIT 5;"
+    answer: "For grocery shopping, the best cards are: 1. HDFC Millennia (5% cashback on grocery), 2. ICICI Amazon Pay (2% cashback), 3. Axis Flipkart (2% cashback). These cards offer category-specific rewards for grocery transactions."
+    category: "grocery"
+    
+  - question: "Which card gives the best rewards for movie tickets?"
+    sql_query: "SELECT c.card_name, c.bank_name, c.reward_rate FROM card_master_data c WHERE c.category = 'entertainment' OR c.category = 'movies' ORDER BY c.reward_rate DESC LIMIT 5;"
+    answer: "For movie tickets, the best cards are: 1. HDFC Millennia (5% cashback on entertainment), 2. ICICI Coral (3% cashback), 3. Axis MyZone (4X reward points). These cards offer rewards for entertainment category spends."
+    category: "entertainment"

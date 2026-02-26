@@ -1,0 +1,51 @@
+services:
+  # Backend Service (Integrated with SQL Agent)
+  - type: web
+    name: smartcards-ai-2
+    env: docker
+    dockerfilePath: backend/Dockerfile
+    plan: free
+    buildCommand: docker build --no-cache -f backend/Dockerfile backend/
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: EMBEDDING_MODEL
+        value: text-embedding-ada-002
+      - key: CHROMA_COLLECTION_NAME
+        value: credit_card_knowledge
+      - key: CACHE_ENABLED
+        value: true
+      - key: CACHE_TTL_SECONDS
+        value: 3600
+      - key: DATABASE_URL
+        value: sqlite:///./smartcards_ai.db
+      - key: TARGET_DATABASE_URL
+        value: sqlite:///./smartcards_ai.db
+      - key: TARGET_ASYNC_DATABASE_URL
+        value: sqlite+aiosqlite:///./smartcards_ai.db
+      - key: ALLOWED_ORIGINS
+        value: https://smartcards-ai-frontend.onrender.com
+    healthCheckPath: /health
+    autoDeploy: true
+
+  # Frontend Service
+  - type: web
+    name: smartcards-ai-frontend
+    env: docker
+    dockerfilePath: frontend/Dockerfile
+    plan: free
+    buildCommand: docker build --no-cache --build-arg CACHEBUST=$(date +%s) .
+    envVars:
+      - key: REACT_APP_API_URL
+        value: https://smartcards-ai-2.onrender.com
+      - key: REACT_APP_ENVIRONMENT
+        value: production
+    autoDeploy: true
+
+ 
