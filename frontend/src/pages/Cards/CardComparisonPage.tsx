@@ -153,7 +153,6 @@ const CardComparisonPage: React.FC = () => {
     try {
       // Show loading state
       const exportButton = document.querySelector('[data-export-button]') as HTMLButtonElement;
-      const originalText = exportButton?.innerHTML;
       if (exportButton) {
         exportButton.innerHTML = '<Loader2 className="w-4 h-4 animate-spin" /> Generating...';
         exportButton.disabled = true;

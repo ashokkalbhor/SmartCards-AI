@@ -22,7 +22,8 @@ RUN apt-get update \
 # Install Python dependencies
 COPY requirements.txt requirements.txt
 RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir -r requirements.txt
+    && pip install --no-cache-dir -r requirements.txt \
+    && playwright install chromium --with-deps
 
 # Copy project (this will be affected by CACHEBUST)
 COPY . .

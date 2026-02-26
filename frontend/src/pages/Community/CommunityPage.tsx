@@ -86,6 +86,8 @@ const CommunityPage: React.FC = () => {
       loadCardData();
       loadPosts(true);
     }
+    // loadCardData and loadPosts are stable (no deps) so safe to ignore
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cardId, sortBy]);
 
   const handleCreatePost = async () => {

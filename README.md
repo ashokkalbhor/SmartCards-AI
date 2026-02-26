@@ -18,6 +18,7 @@ SmartCards AI tells you which credit card to use for maximum rewards based on th
 - **Card Portfolio**: Remember and manage all your credit cards
 - **Reward Tracking**: Monitor your rewards and cashback earnings
 - **Real-time Updates**: Get instant recommendations based on current offers
+- **Automated Card Updates**: GenAI-powered monthly updates to keep card data current (see [Admin Guide](ADMIN_CARD_UPDATES.md))
 
 ### Premium UI/UX
 - **Smooth Animations**: Fluid transitions and micro-interactions
@@ -161,6 +162,18 @@ Our design system is inspired by modern fintech apps like Cred, featuring:
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 👨‍💼 Admin Features
+
+### Automated Card Data Updates
+The platform includes a GenAI-powered system that automatically keeps credit card information up-to-date:
+
+- **Monthly Automated Updates**: Runs on the 1st of every month
+- **Manual Triggers**: Admin can update all cards or specific cards on-demand
+- **Approval Workflow**: All automated changes require admin review
+- **Community Transparency**: Approved changes are posted to community
+
+**For Admins**: See [ADMIN_CARD_UPDATES.md](ADMIN_CARD_UPDATES.md) for complete documentation and [ADMIN_QUICK_REFERENCE.md](ADMIN_QUICK_REFERENCE.md) for quick commands.
 
 ## 🆘 Support
 

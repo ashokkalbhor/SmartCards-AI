@@ -29,15 +29,17 @@ import SettingsPage from './pages/Settings/SettingsPage';
 import CommunityPage from './pages/Community/CommunityPage';
 import PostDetailPage from './pages/Community/PostDetailPage';
 import AdminDashboardPage from './pages/Admin/AdminDashboardPage';
+import CardUpdatesPage from './pages/Admin/CardUpdatesPage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import TermsOfServicePage from './pages/TermsOfServicePage';
-
+import { Suspense, lazy } from 'react';
 // Hooks
 import { useAuth } from './hooks/useAuth';
 import { useTheme } from './hooks/useTheme';
-
 // Styles
 import './styles/globals.css';
+// Lazy-loaded pages (must come after all imports to satisfy import/first)
+const AdminAnalyticsPage = lazy(() => import('./pages/Admin/AdminAnalyticsPage'));
 
 // Create a client
 const queryClient = new QueryClient({
@@ -210,6 +212,22 @@ function AppContent() {
             <ProtectedRoute>
               <Layout>
                 <AdminDashboardPage />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/card-updates" element={
+            <ProtectedRoute>
+              <Layout>
+                <CardUpdatesPage />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/analytics" element={
+            <ProtectedRoute>
+              <Layout>
+                <Suspense fallback={<LoadingSpinner size="lg" />}>
+                  <AdminAnalyticsPage />
+                </Suspense>
               </Layout>
             </ProtectedRoute>
           } />

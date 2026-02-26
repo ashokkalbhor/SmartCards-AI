@@ -21,6 +21,17 @@ except ImportError as e:
     SQL_AGENT_AVAILABLE = False
     SQLAgentService = None
 
+# Try to import Card Update Scheduler - fail gracefully if not available
+try:
+    from app.services.card_update_scheduler import card_update_scheduler
+    from app.api.v1.endpoints.card_updates import router as card_updates_router
+    CARD_UPDATES_AVAILABLE = True
+except ImportError as e:
+    print(f"⚠️ Card Update Scheduler not available: {e}")
+    CARD_UPDATES_AVAILABLE = False
+    card_update_scheduler = None
+    card_updates_router = None
+
 # Setup logging
 setup_logging()
 logger = structlog.get_logger()
@@ -111,6 +122,16 @@ async def startup_event():
             # Continue running - service will be in degraded mode
     else:
         logger.info("⚠️ SQL Agent Service not available - running in degraded mode")
+    
+    # Initialize Card Update Scheduler
+    if CARD_UPDATES_AVAILABLE and card_update_scheduler:
+        try:
+            card_update_scheduler.start()
+            logger.info("✅ Card Update Scheduler initialized successfully")
+        except Exception as e:
+            logger.error(f"❌ Failed to initialize Card Update Scheduler: {e}")
+    else:
+        logger.info("⚠️ Card Update Scheduler not available")
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -170,9 +191,25 @@ async def startup_event():
 async def shutdown_event():
     """Application shutdown event"""
     logger.info("Shutting down SmartCards AI API")
+    
+    # Stop Card Update Scheduler
+    if CARD_UPDATES_AVAILABLE and card_update_scheduler:
+        try:
+            card_update_scheduler.stop()
+            logger.info("✅ Card Update Scheduler stopped successfully")
+        except Exception as e:
+            logger.error(f"❌ Failed to stop Card Update Scheduler: {e}")
 
 # Include API router
 app.include_router(api_router, prefix=settings.API_V1_STR)
+
+# Include card updates router if available
+if CARD_UPDATES_AVAILABLE and card_updates_router:
+    app.include_router(
+        card_updates_router,
+        prefix=f"{settings.API_V1_STR}/card-updates",
+        tags=["card-updates"]
+    )
 
 @app.get("/")
 async def root():

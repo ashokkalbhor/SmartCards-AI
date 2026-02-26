@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Create axios instance with base configuration
 const api = axios.create({
-  baseURL: process.env.NODE_ENV === 'production' 
+  baseURL: process.env.NODE_ENV === 'production'
     ? 'https://smartcards-ai-2.onrender.com/api/v1'  // Render backend URL
     : 'http://localhost:8000/api/v1',
   headers: {
@@ -36,14 +36,14 @@ api.interceptors.response.use(
       try {
         const refreshToken = localStorage.getItem('refresh_token');
         if (refreshToken) {
-                  const response = await axios.post(
-          process.env.NODE_ENV === 'production' 
-            ? 'https://smartcards-ai-2.onrender.com/api/v1/auth/refresh'
-            : 'http://localhost:8000/api/v1/auth/refresh',
-          {
-            refresh_token: refreshToken,
-          }
-        );
+          const response = await axios.post(
+            process.env.NODE_ENV === 'production'
+              ? 'https://smartcards-ai-2.onrender.com/api/v1/auth/refresh'
+              : 'http://localhost:8000/api/v1/auth/refresh',
+            {
+              refresh_token: refreshToken,
+            }
+          );
 
           const { access_token, refresh_token } = response.data;
           localStorage.setItem('access_token', access_token);
@@ -181,7 +181,7 @@ export const cardMasterDataAPI = {
     if (cardIds && cardIds.length > 0) {
       cardIds.forEach(id => params.append('card_ids', id.toString()));
     }
-    
+
     const response = await api.get(`/card-master-data/comparison?${params.toString()}`);
     return response.data;
   },
@@ -193,13 +193,18 @@ export const cardMasterDataAPI = {
     if (isActive !== undefined) params.append('is_active', isActive.toString());
     // Request a higher limit to get more cards
     params.append('limit', '1000');
-    
+
     const response = await api.get(`/card-master-data/cards?${params.toString()}`);
     return response.data;
   },
 
   getCardById: async (cardId: string) => {
     const response = await api.get(`/card-master-data/cards/${cardId}`);
+    return response.data;
+  },
+
+  createCard: async (cardData: any) => {
+    const response = await api.post('/card-master-data/cards', cardData);
     return response.data;
   },
 
@@ -224,7 +229,7 @@ export const cardMasterDataAPI = {
     if (limit) params.append('limit', limit.toString());
     if (category) params.append('category', category);
     if (tier) params.append('tier', tier);
-    
+
     const response = await api.get(`/merchants/popularity-ranking?${params.toString()}`);
     return response.data;
   },
@@ -242,7 +247,7 @@ export const cardMasterDataAPI = {
   getGrowthMerchants: async (minGrowthRate?: number) => {
     const params = new URLSearchParams();
     if (minGrowthRate) params.append('min_growth_rate', minGrowthRate.toString());
-    
+
     const response = await api.get(`/merchants/growth-merchants?${params.toString()}`);
     return response.data;
   },
@@ -254,26 +259,26 @@ export const cardReviewsAPI = {
     const queryParams = new URLSearchParams();
     if (params?.skip) queryParams.append('skip', params.skip.toString());
     if (params?.limit) queryParams.append('limit', params.limit.toString());
-    
+
     const response = await api.get(`/reviews/cards/${cardId}/reviews?${queryParams.toString()}`);
     return response.data;
   },
-  
+
   createReview: async (cardId: string, reviewData: any) => {
     const response = await api.post(`/reviews/cards/${cardId}/reviews`, reviewData);
     return response.data;
   },
-  
+
   updateReview: async (reviewId: string, reviewData: any) => {
     const response = await api.put(`/reviews/${reviewId}`, reviewData);
     return response.data;
   },
-  
+
   deleteReview: async (reviewId: string) => {
     const response = await api.delete(`/reviews/${reviewId}`);
     return response.data;
   },
-  
+
   voteOnReview: async (reviewId: string, voteType: 'helpful' | 'not_helpful') => {
     const response = await api.post(`/reviews/${reviewId}/vote`, { vote_type: voteType });
     return response.data;
@@ -292,7 +297,7 @@ export const communityAPI = {
     if (params?.skip) queryParams.append('skip', params.skip.toString());
     if (params?.limit) queryParams.append('limit', params.limit.toString());
     if (params?.sort_by) queryParams.append('sort_by', params.sort_by);
-    
+
     const response = await api.get(`/community/cards/${cardId}/posts?${queryParams.toString()}`);
     return response.data;
   },
@@ -357,6 +362,21 @@ export const adminAPI = {
     return response.data;
   },
 
+  getDAU: async () => {
+    const response = await api.get('/admin/analytics/dau');
+    return response.data;
+  },
+
+  triggerCardUpdate: async (cardId: number) => {
+    const response = await api.post(`/card-updates/trigger-card/${cardId}`);
+    return response.data;
+  },
+
+  getMAU: async () => {
+    const response = await api.get('/admin/analytics/mau');
+    return response.data;
+  },
+
   getUsers: async (params?: {
     skip?: number;
     limit?: number;
@@ -368,7 +388,7 @@ export const adminAPI = {
     if (params?.limit) queryParams.append('limit', params.limit.toString());
     if (params?.search) queryParams.append('search', params.search);
     if (params?.role_filter) queryParams.append('role_filter', params.role_filter);
-    
+
     const response = await api.get(`/admin/users?${queryParams.toString()}`);
     return response.data;
   },
@@ -382,7 +402,7 @@ export const adminAPI = {
     if (params?.status_filter) queryParams.append('status_filter', params.status_filter);
     if (params?.skip) queryParams.append('skip', params.skip.toString());
     if (params?.limit) queryParams.append('limit', params.limit.toString());
-    
+
     const response = await api.get(`/admin/moderator-requests?${queryParams.toString()}`);
     return response.data;
   },
@@ -403,13 +423,13 @@ export const adminAPI = {
     if (params?.field_type) queryParams.append('field_type', params.field_type);
     if (params?.skip) queryParams.append('skip', params.skip.toString());
     if (params?.limit) queryParams.append('limit', params.limit.toString());
-    
+
     const response = await api.get(`/admin/edit-suggestions?${queryParams.toString()}`);
     return response.data;
   },
 
-  reviewEditSuggestion: async (suggestionId: number, reviewData: { 
-    status: string; 
+  reviewEditSuggestion: async (suggestionId: number, reviewData: {
+    status: string;
     review_notes?: string;
   }) => {
     const response = await api.put(`/admin/edit-suggestions/${suggestionId}`, reviewData);
@@ -427,13 +447,13 @@ export const adminAPI = {
     if (params?.document_type) queryParams.append('document_type', params.document_type);
     if (params?.skip) queryParams.append('skip', params.skip.toString());
     if (params?.limit) queryParams.append('limit', params.limit.toString());
-    
+
     const response = await api.get(`/admin/card-documents?${queryParams.toString()}`);
     return response.data;
   },
 
-  reviewCardDocument: async (documentId: number, reviewData: { 
-    status: string; 
+  reviewCardDocument: async (documentId: number, reviewData: {
+    status: string;
     review_notes?: string;
   }) => {
     const response = await api.put(`/admin/card-documents/${documentId}`, reviewData);
@@ -479,13 +499,13 @@ export const moderatorAPI = {
     if (params?.field_type) queryParams.append('field_type', params.field_type);
     if (params?.skip) queryParams.append('skip', params.skip.toString());
     if (params?.limit) queryParams.append('limit', params.limit.toString());
-    
+
     const response = await api.get(`/moderator/edit-suggestions?${queryParams.toString()}`);
     return response.data;
   },
 
-  reviewSuggestion: async (suggestionId: number, reviewData: { 
-    status: string; 
+  reviewSuggestion: async (suggestionId: number, reviewData: {
+    status: string;
     review_notes?: string;
   }) => {
     const response = await api.put(`/moderator/edit-suggestions/${suggestionId}`, reviewData);
@@ -529,7 +549,7 @@ export const userRolesAPI = {
     if (params?.status_filter) queryParams.append('status_filter', params.status_filter);
     if (params?.skip) queryParams.append('skip', params.skip.toString());
     if (params?.limit) queryParams.append('limit', params.limit.toString());
-    
+
     const response = await api.get(`/user-roles/my-suggestions?${queryParams.toString()}`);
     return response.data;
   },
@@ -560,7 +580,7 @@ export const cardDocumentsAPI = {
     if (params?.status_filter) queryParams.append('status_filter', params.status_filter);
     if (params?.skip) queryParams.append('skip', params.skip.toString());
     if (params?.limit) queryParams.append('limit', params.limit.toString());
-    
+
     const response = await api.get(`/card-documents/my-submissions?${queryParams.toString()}`);
     return response.data;
   },
@@ -577,12 +597,12 @@ export const cardDocumentsAPI = {
 
   downloadDocument: async (documentId: number) => {
     // Create a direct download link
-    const baseURL = process.env.NODE_ENV === 'production' 
+    const baseURL = process.env.NODE_ENV === 'production'
       ? 'https://smartcards-ai-2.onrender.com/api/v1'  // Render backend URL
       : 'http://localhost:8000/api/v1';
-    
+
     const downloadURL = `${baseURL}/card-documents/download/${documentId}`;
-    
+
     // Create a temporary link and trigger download
     const link = document.createElement('a');
     link.href = downloadURL;
@@ -595,7 +615,7 @@ export const cardDocumentsAPI = {
 
 // SQL Agent API - Now integrated into main backend
 const sqlAgentAPI = axios.create({
-  baseURL: process.env.NODE_ENV === 'production' 
+  baseURL: process.env.NODE_ENV === 'production'
     ? 'https://smartcards-ai-2.onrender.com/api/v1'  // Production backend URL
     : 'http://localhost:8000/api/v1',  // Local backend URL
   headers: {

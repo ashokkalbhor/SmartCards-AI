@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CreditCard, Search, Plus, ArrowLeft, AlertCircle, CheckCircle, Calendar, DollarSign, Percent, Shield, Eye } from 'lucide-react';
+import { CreditCard, Search, Plus, ArrowLeft, AlertCircle, CheckCircle, DollarSign, Percent, Eye } from 'lucide-react';
 import { cardMasterDataAPI, creditCardsAPI } from '../../services/api';
 
 interface MasterCard {

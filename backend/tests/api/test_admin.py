@@ -1,7 +1,9 @@
 import pytest
+import json
 from fastapi.testclient import TestClient
 from app.models.edit_suggestion import EditSuggestion
 from app.models.user import User
+from app.models.card_master_data import CardSpendingCategory
 
 class TestAdmin:
     """Test admin functionality"""
@@ -134,6 +136,57 @@ class TestAdmin:
         # Check that the card data was updated
         db.refresh(test_spending_category)
         assert test_spending_category.reward_rate == 6.0
+
+    def test_review_edit_suggestion_new_category_json_payload(self, client, admin_headers, test_card, test_user, db):
+        """Test approving new spending category provided as JSON payload"""
+        new_payload = {
+            "category_name": "movies",
+            "category_display_name": "Movies",
+            "reward_rate": 12,
+            "reward_type": "points",
+            "reward_cap": None,
+            "reward_cap_period": None,
+            "minimum_transaction_amount": 200,
+            "additional_conditions": "12 points per Rs 200 spend"
+        }
+
+        suggestion = EditSuggestion(
+            user_id=test_user.id,
+            card_master_id=test_card.id,
+            field_type="spending_category",
+            field_name="movies",
+            old_value=None,
+            new_value=json.dumps(new_payload),
+            suggestion_reason="Automated update",
+            status="pending"
+        )
+        db.add(suggestion)
+        db.commit()
+
+        review_data = {
+            "status": "approved",
+            "review_notes": "Looks good"
+        }
+
+        response = client.put(
+            f"/api/v1/admin/edit-suggestions/{suggestion.id}",
+            json=review_data,
+            headers=admin_headers,
+        )
+
+        assert response.status_code == 200
+
+        category = db.query(CardSpendingCategory).filter(
+            CardSpendingCategory.card_master_id == test_card.id,
+            CardSpendingCategory.category_name == "movies"
+        ).first()
+
+        assert category is not None
+        assert category.category_display_name == "Movies"
+        assert category.reward_rate == 12
+        assert category.reward_type == "points"
+        assert category.minimum_transaction_amount == 200
+        assert category.additional_conditions == "12 points per Rs 200 spend"
     
     def test_review_edit_suggestion_reject(self, client, admin_headers, test_card, test_user, db):
         """Test rejecting edit suggestion"""

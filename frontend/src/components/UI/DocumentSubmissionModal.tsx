@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Upload, Link, FileText, AlertCircle, CheckCircle } from 'lucide-react';
+import { X, Upload, AlertCircle, CheckCircle } from 'lucide-react';
 import { cardDocumentsAPI } from '../../services/api';
 
 interface DocumentSubmissionModalProps {

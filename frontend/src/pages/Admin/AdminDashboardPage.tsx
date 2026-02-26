@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   Users,
@@ -12,10 +12,13 @@ import {
   Eye,
   Edit,
   ExternalLink,
-  MessageSquare
+  MessageSquare,
+  RefreshCw,
+  Plus
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import { adminAPI } from '../../services/api';
+import { adminAPI, cardMasterDataAPI } from '../../services/api';
+import { useNavigate } from 'react-router-dom';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
 
 interface AdminStats {
@@ -114,8 +117,24 @@ interface CardDocument {
   submission_reason: string;
 }
 
+export const SUGGESTIONS_PAGE_SIZE = 25;
+
+const getStatusWeight = (status: string) => {
+  switch (status) {
+    case 'pending':
+      return 0;
+    case 'approved':
+      return 1;
+    case 'rejected':
+      return 2;
+    default:
+      return 3;
+  }
+};
+
 const AdminDashboardPage: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [users, setUsers] = useState<UserInfo[]>([]);
   const [moderatorRequests, setModeratorRequests] = useState<ModeratorRequest[]>([]);
@@ -124,32 +143,129 @@ const AdminDashboardPage: React.FC = () => {
   const [chatAccessRequests, setChatAccessRequests] = useState<ChatAccessRequest[]>([]);
   const [chatAccessStats, setChatAccessStats] = useState<ChatAccessStats | null>(null);
   const [chatAccessFilter, setChatAccessFilter] = useState<string>('pending');
+  const [suggestionPage, setSuggestionPage] = useState(0);
+  const [hasMoreSuggestions, setHasMoreSuggestions] = useState(true);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'moderators' | 'suggestions' | 'documents' | 'chat-approvals'>('overview');
+  const [isAddCardModalOpen, setIsAddCardModalOpen] = useState(false);
+  const [addCardLoading, setAddCardLoading] = useState(false);
+  const [addCardFormData, setAddCardFormData] = useState({
+    bank_name: '',
+    card_name: '',
+    card_variant: '',
+    card_network: 'Visa', // Default
+    official_url: '',
+  });
 
-  const fetchAdminData = async () => {
+  const pendingSuggestions = useMemo(
+    () => editSuggestions.filter((suggestion) => suggestion.status === 'pending'),
+    [editSuggestions]
+  );
+  const pendingSuggestionIds = useMemo(
+    () => pendingSuggestions.map((suggestion) => suggestion.id),
+    [pendingSuggestions]
+  );
+  const hasPendingSuggestions = pendingSuggestionIds.length > 0;
+  const suggestionActionDisabled = bulkActionLoading || loadingSuggestions;
+  const bulkActionDisabled = suggestionActionDisabled || !hasPendingSuggestions;
+
+  const fetchEditSuggestionsPage = useCallback(
+    async (page = 0, reset = false) => {
+      setLoadingSuggestions(true);
+      try {
+        const response = await adminAPI.getEditSuggestions({
+          skip: page * SUGGESTIONS_PAGE_SIZE,
+          limit: SUGGESTIONS_PAGE_SIZE,
+        });
+
+        setHasMoreSuggestions(response.length === SUGGESTIONS_PAGE_SIZE);
+        setSuggestionPage(page);
+        setEditSuggestions(prev => {
+          const merged = reset || page === 0 ? response : [...prev, ...response];
+          const sorted = [...merged].sort((a, b) => {
+            const statusDiff = getStatusWeight(a.status) - getStatusWeight(b.status);
+            if (statusDiff !== 0) {
+              return statusDiff;
+            }
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          });
+          return sorted;
+        });
+      } catch (error) {
+        console.error('Error fetching edit suggestions:', error);
+        if (reset) {
+          setEditSuggestions([]);
+        }
+        setHasMoreSuggestions(false);
+      } finally {
+        setLoadingSuggestions(false);
+      }
+    },
+    []
+  );
+
+  const fetchAdminData = useCallback(async (resetSuggestions = true) => {
     try {
       setLoading(true);
-      const [statsData, usersData, requestsData, suggestionsData, documentsData] = await Promise.all([
+      const [statsData, usersData, requestsData, documentsData] = await Promise.all([
         adminAPI.getStats(),
         adminAPI.getUsers(),
         adminAPI.getModeratorRequests(),
-        adminAPI.getEditSuggestions(),
         adminAPI.getCardDocuments()
       ]);
 
       setStats(statsData);
       setUsers(usersData);
       setModeratorRequests(requestsData);
-      setEditSuggestions(suggestionsData);
       setCardDocuments(documentsData);
+      if (resetSuggestions) {
+        await fetchEditSuggestionsPage(0, true);
+      }
     } catch (error) {
       console.error('Error fetching admin data:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [fetchEditSuggestionsPage]);
 
+  const processEditSuggestions = useCallback(
+    async (
+      suggestionIds: number[],
+      status: 'approved' | 'rejected',
+      options?: { reviewNotes?: string; showBulkLoader?: boolean }
+    ) => {
+      if (!suggestionIds.length) {
+        return;
+      }
+
+      const { reviewNotes, showBulkLoader = true } = options ?? {};
+
+      if (showBulkLoader) {
+        setBulkActionLoading(true);
+      }
+
+      try {
+        await Promise.all(
+          suggestionIds.map((id) =>
+            adminAPI.reviewEditSuggestion(id, {
+              status,
+              review_notes: reviewNotes,
+            })
+          )
+        );
+        await fetchAdminData();
+      } catch (error) {
+        console.error('Error reviewing edit suggestions:', error);
+      } finally {
+        if (showBulkLoader) {
+          setBulkActionLoading(false);
+        }
+      }
+    },
+    [fetchAdminData]
+  );
   const fetchChatAccessRequests = useCallback(async () => {
     try {
       const response = await adminAPI.getChatAccessRequests(chatAccessFilter);
@@ -170,7 +286,7 @@ const AdminDashboardPage: React.FC = () => {
 
   useEffect(() => {
     fetchAdminData();
-  }, []);
+  }, [fetchAdminData]);
 
   useEffect(() => {
     if (activeTab === 'chat-approvals') {
@@ -192,27 +308,73 @@ const AdminDashboardPage: React.FC = () => {
   const handleModeratorRequest = async (requestId: number, status: 'approved' | 'rejected') => {
     try {
       await adminAPI.reviewModeratorRequest(requestId, { status });
-      fetchAdminData(); // Refresh data
+      await fetchAdminData(); // Refresh data
     } catch (error) {
       console.error('Error reviewing moderator request:', error);
     }
   };
 
   const handleEditSuggestion = async (suggestionId: number, status: 'approved' | 'rejected', notes?: string) => {
-    try {
-      await adminAPI.reviewEditSuggestion(suggestionId, { status, review_notes: notes });
-      fetchAdminData(); // Refresh data
-    } catch (error) {
-      console.error('Error reviewing edit suggestion:', error);
-    }
+    await processEditSuggestions(
+      [suggestionId],
+      status,
+      {
+        reviewNotes: notes,
+        showBulkLoader: false,
+      }
+    );
   };
 
   const handleCardDocument = async (documentId: number, status: 'approved' | 'rejected', notes?: string) => {
     try {
       await adminAPI.reviewCardDocument(documentId, { status, review_notes: notes });
-      fetchAdminData(); // Refresh data
+      await fetchAdminData(); // Refresh data
     } catch (error) {
       console.error('Error reviewing card document:', error);
+    }
+  };
+  const handleBulkEditSuggestions = async (status: 'approved' | 'rejected') => {
+    if (bulkActionDisabled) {
+      return;
+    }
+    await processEditSuggestions(pendingSuggestionIds, status, { showBulkLoader: true });
+  };
+
+  const handleAddCard = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAddCardLoading(true);
+    try {
+      // 1. Create Card
+      const newCard = await cardMasterDataAPI.createCard({
+        bank_name: addCardFormData.bank_name,
+        card_name: addCardFormData.card_name,
+        card_variant: addCardFormData.card_variant || null,
+        card_network: addCardFormData.card_network,
+        terms_and_conditions_url: addCardFormData.official_url,
+        is_active: true,
+      });
+
+      // 2. Trigger Update
+      if (newCard && newCard.id) {
+        await adminAPI.triggerCardUpdate(newCard.id);
+      }
+
+      // Reset and Close
+      setIsAddCardModalOpen(false);
+      setAddCardFormData({
+        bank_name: '',
+        card_name: '',
+        card_variant: '',
+        card_network: 'Visa',
+        official_url: '',
+      });
+      await fetchAdminData();
+      alert('Card created successfully! The AI agent has been triggered to fetch details.');
+    } catch (error) {
+      console.error('Error adding card:', error);
+      alert('Failed to add card. Check console for details.');
+    } finally {
+      setAddCardLoading(false);
     }
   };
 
@@ -240,13 +402,34 @@ const AdminDashboardPage: React.FC = () => {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            Admin Dashboard
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Manage users, moderators, and content suggestions
-          </p>
+        <div className="mb-8 flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+              Admin Dashboard
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400">
+              Manage users, moderators, and content suggestions
+            </p>
+          </div>
+
+          {/* Quick Action: Card Updates */}
+          {/* Quick Action: Card Updates */}
+          <div className="flex gap-3">
+            <button
+              onClick={() => setIsAddCardModalOpen(true)}
+              className="flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors shadow-sm"
+            >
+              <Plus className="w-5 h-5" />
+              <span>Add New Card</span>
+            </button>
+            <button
+              onClick={() => navigate('/admin/card-updates')}
+              className="flex items-center space-x-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors shadow-sm"
+            >
+              <RefreshCw className="w-5 h-5" />
+              <span>Card Updates</span>
+            </button>
+          </div>
         </div>
 
         {/* Stats Cards */}
@@ -359,11 +542,10 @@ const AdminDashboardPage: React.FC = () => {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    activeTab === tab.id
-                      ? 'bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300'
-                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                  }`}
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === tab.id
+                    ? 'bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                    }`}
                 >
                   <Icon className="w-4 h-4" />
                   <span>{tab.label}</span>
@@ -425,22 +607,20 @@ const AdminDashboardPage: React.FC = () => {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            user.current_role === 'moderator' 
-                              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                              : user.current_role === 'admin'
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${user.current_role === 'moderator'
+                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                            : user.current_role === 'admin'
                               ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
                               : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
-                          }`}>
+                            }`}>
                             {user.current_role || 'user'}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${
-                            user.is_active
-                              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                              : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                          }`}>
+                          <span className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${user.is_active
+                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                            : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                            }`}>
                             {user.is_active ? 'Active' : 'Inactive'}
                           </span>
                         </td>
@@ -497,11 +677,10 @@ const AdminDashboardPage: React.FC = () => {
                           </>
                         )}
                         {request.status !== 'pending' && (
-                          <span className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${
-                            request.status === 'approved'
-                              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                              : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                          }`}>
+                          <span className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${request.status === 'approved'
+                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                            : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                            }`}>
                             {request.status}
                           </span>
                         )}
@@ -515,8 +694,44 @@ const AdminDashboardPage: React.FC = () => {
 
           {activeTab === 'suggestions' && (
             <div className="p-6">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Edit Suggestions</h2>
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Edit Suggestions</h2>
+                <div className="flex flex-wrap items-center gap-3">
+                  {typeof stats?.edit_suggestions?.pending === 'number' && (
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                      Showing {editSuggestions.length} suggestions • Pending total {stats.edit_suggestions.pending}
+                    </span>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleBulkEditSuggestions('approved')}
+                      disabled={bulkActionDisabled}
+                      className={`px-3 py-1 text-sm font-medium rounded-md border transition-colors ${bulkActionDisabled
+                        ? 'opacity-60 cursor-not-allowed border-gray-300 dark:border-gray-700 text-gray-400 dark:text-gray-500'
+                        : 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200 border-green-200 dark:border-green-800 hover:bg-green-200 dark:hover:bg-green-800'
+                        }`}
+                    >
+                      {bulkActionLoading ? 'Processing…' : 'Approve All Pending'}
+                    </button>
+                    <button
+                      onClick={() => handleBulkEditSuggestions('rejected')}
+                      disabled={bulkActionDisabled}
+                      className={`px-3 py-1 text-sm font-medium rounded-md border transition-colors ${bulkActionDisabled
+                        ? 'opacity-60 cursor-not-allowed border-gray-300 dark:border-gray-700 text-gray-400 dark:text-gray-500'
+                        : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200 border-red-200 dark:border-red-800 hover:bg-red-200 dark:hover:bg-red-800'
+                        }`}
+                    >
+                      {bulkActionLoading ? 'Processing…' : 'Reject All Pending'}
+                    </button>
+                  </div>
+                </div>
+              </div>
               <div className="space-y-4">
+                {editSuggestions.length === 0 && !loadingSuggestions && (
+                  <div className="text-center py-12 border border-dashed border-gray-300 dark:border-gray-700 rounded-lg text-gray-500 dark:text-gray-400">
+                    No suggestions to review right now.
+                  </div>
+                )}
                 {editSuggestions.map((suggestion) => (
                   <div key={suggestion.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                     <div className="flex items-start justify-between">
@@ -556,14 +771,22 @@ const AdminDashboardPage: React.FC = () => {
                           <>
                             <button
                               onClick={() => handleEditSuggestion(suggestion.id, 'approved')}
-                              className="flex items-center space-x-1 px-3 py-1 bg-green-100 text-green-700 rounded-md hover:bg-green-200 dark:bg-green-900 dark:text-green-200 dark:hover:bg-green-800"
+                              disabled={suggestionActionDisabled}
+                              className={`flex items-center space-x-1 px-3 py-1 rounded-md transition-colors ${suggestionActionDisabled
+                                ? 'bg-green-100/60 text-green-400 cursor-not-allowed dark:bg-green-900/60 dark:text-green-600'
+                                : 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900 dark:text-green-200 dark:hover:bg-green-800'
+                                }`}
                             >
                               <CheckCircle className="w-4 h-4" />
                               <span>Approve</span>
                             </button>
                             <button
                               onClick={() => handleEditSuggestion(suggestion.id, 'rejected')}
-                              className="flex items-center space-x-1 px-3 py-1 bg-red-100 text-red-700 rounded-md hover:bg-red-200 dark:bg-red-900 dark:text-red-200 dark:hover:bg-red-800"
+                              disabled={suggestionActionDisabled}
+                              className={`flex items-center space-x-1 px-3 py-1 rounded-md transition-colors ${suggestionActionDisabled
+                                ? 'bg-red-100/60 text-red-400 cursor-not-allowed dark:bg-red-900/60 dark:text-red-600'
+                                : 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900 dark:text-red-200 dark:hover:bg-red-800'
+                                }`}
                             >
                               <XCircle className="w-4 h-4" />
                               <span>Reject</span>
@@ -571,11 +794,10 @@ const AdminDashboardPage: React.FC = () => {
                           </>
                         )}
                         {suggestion.status !== 'pending' && (
-                          <span className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${
-                            suggestion.status === 'approved'
-                              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                              : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                          }`}>
+                          <span className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${suggestion.status === 'approved'
+                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                            : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                            }`}>
                             {suggestion.status}
                           </span>
                         )}
@@ -583,6 +805,25 @@ const AdminDashboardPage: React.FC = () => {
                     </div>
                   </div>
                 ))}
+                {loadingSuggestions && (
+                  <div className="flex justify-center py-4">
+                    <LoadingSpinner />
+                  </div>
+                )}
+                {hasMoreSuggestions && !loadingSuggestions && (
+                  <div className="flex justify-center pt-2">
+                    <button
+                      onClick={() => fetchEditSuggestionsPage(suggestionPage + 1)}
+                      disabled={bulkActionLoading}
+                      className={`px-4 py-2 text-sm font-medium border rounded-md transition-colors ${bulkActionLoading
+                        ? 'text-primary-300 border-primary-100 cursor-not-allowed dark:text-primary-600 dark:border-primary-800 opacity-60'
+                        : 'text-primary-600 hover:text-primary-700 border-primary-200 dark:text-primary-300 dark:hover:text-primary-200 dark:border-primary-700'
+                        }`}
+                    >
+                      Load more suggestions
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -666,11 +907,10 @@ const AdminDashboardPage: React.FC = () => {
                           </>
                         )}
                         {document.status !== 'pending' && (
-                          <span className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${
-                            document.status === 'approved'
-                              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                              : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                          }`}>
+                          <span className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${document.status === 'approved'
+                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                            : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                            }`}>
                             {document.status}
                           </span>
                         )}
@@ -692,7 +932,7 @@ const AdminDashboardPage: React.FC = () => {
           {activeTab === 'chat-approvals' && (
             <div className="p-6">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Chat Access Requests</h2>
-              
+
               {/* Stats Cards */}
               {chatAccessStats && (
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
@@ -741,11 +981,10 @@ const AdminDashboardPage: React.FC = () => {
                   <button
                     key={status}
                     onClick={() => setChatAccessFilter(status)}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                      chatAccessFilter === status
-                        ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
-                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                    }`}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${chatAccessFilter === status
+                      ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                      }`}
                   >
                     {status.charAt(0).toUpperCase() + status.slice(1)}
                   </button>
@@ -763,11 +1002,10 @@ const AdminDashboardPage: React.FC = () => {
                             <h4 className="font-medium text-gray-900 dark:text-white">{request.user_name}</h4>
                             <p className="text-sm text-gray-600 dark:text-gray-400">{request.user_email}</p>
                           </div>
-                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                            request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                             request.status === 'approved' ? 'bg-green-100 text-green-800' :
-                            'bg-red-100 text-red-800'
-                          }`}>
+                              'bg-red-100 text-red-800'
+                            }`}>
                             {request.status}
                           </span>
                         </div>
@@ -805,6 +1043,130 @@ const AdminDashboardPage: React.FC = () => {
           )}
         </div>
       </div>
+      {/* Add Card Modal */}
+      {isAddCardModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md overflow-hidden"
+            {...({} as any)}
+          >
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Add New Card</h3>
+                <button
+                  onClick={() => setIsAddCardModalOpen(false)}
+                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                >
+                  <XCircle className="w-6 h-6" />
+                </button>
+              </div>
+
+              <form onSubmit={handleAddCard} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Bank Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={addCardFormData.bank_name}
+                    onChange={(e) => setAddCardFormData({ ...addCardFormData, bank_name: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    placeholder="e.g. HDFC Bank"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Card Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={addCardFormData.card_name}
+                    onChange={(e) => setAddCardFormData({ ...addCardFormData, card_name: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    placeholder="e.g. Millennia"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Card Network *
+                  </label>
+                  <select
+                    value={addCardFormData.card_network}
+                    onChange={(e) => setAddCardFormData({ ...addCardFormData, card_network: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  >
+                    <option value="Visa">Visa</option>
+                    <option value="Mastercard">Mastercard</option>
+                    <option value="RuPay">RuPay</option>
+                    <option value="Amex">Amex</option>
+                    <option value="Diners Club">Diners Club</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Card Variant
+                  </label>
+                  <input
+                    type="text"
+                    value={addCardFormData.card_variant}
+                    onChange={(e) => setAddCardFormData({ ...addCardFormData, card_variant: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    placeholder="e.g. Visa Signature (Optional)"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Official URL (For Auto-Extraction)
+                  </label>
+                  <input
+                    type="url"
+                    value={addCardFormData.official_url}
+                    onChange={(e) => setAddCardFormData({ ...addCardFormData, official_url: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    placeholder="https://..."
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Providing this URL allows the AI agent to automatically fetch fees, rewards, and benefits.
+                  </p>
+                </div>
+
+                <div className="flex justify-end space-x-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddCardModalOpen(false)}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 rounded-md"
+                    disabled={addCardLoading}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={addCardLoading}
+                    className="flex items-center px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-md disabled:opacity-50"
+                  >
+                    {addCardLoading ? (
+                      <>
+                        <LoadingSpinner size="sm" color="white" className="mr-2" />
+                        Creating...
+                      </>
+                    ) : (
+                      'Add Card'
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };

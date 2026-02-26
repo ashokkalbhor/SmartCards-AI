@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@ant-design/icons": "^6.1.0",
     "@tanstack/react-query": "^5.81.5",
     "@testing-library/jest-dom": "^5.16.4",
     "@testing-library/react": "^13.3.0",
@@ -10,6 +11,7 @@
     "@types/html2canvas": "^0.5.35",
     "@types/jest": "^27.5.2",
     "@types/node": "^16.18.0",
+    "antd": "^5.27.5",
     "axios": "^1.10.0",
     "framer-motion": "^10.16.0",
     "html2canvas": "^1.4.1",
@@ -50,9 +52,11 @@
       "last 1 safari version"
     ]
   },
-  "proxy": "http://localhost:8000",
   "devDependencies": {
-    "@types/react": "^19.1.8",
-    "@types/react-dom": "^19.1.6"
+    "@types/babel__traverse": "^7.28.0",
+    "@types/estree": "^1.0.8",
+    "@types/json-schema": "^7.0.15",
+    "@types/react": "^18.3.27",
+    "@types/react-dom": "^18.3.7"
   }
 }

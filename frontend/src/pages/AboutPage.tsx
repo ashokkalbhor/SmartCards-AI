@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Mail, Phone, MapPin, Linkedin, CreditCard, Award, Briefcase, Code, Database, Cloud, Shield } from 'lucide-react';
+import { ArrowLeft, Mail, MapPin, Linkedin, CreditCard, Award, Code } from 'lucide-react';
 
 const AboutPage: React.FC = () => {
   return (
@@ -291,18 +291,18 @@ const AboutPage: React.FC = () => {
               >
                 About Us
               </Link>
-              <a
-                href="#"
+              <Link
+                to="/privacy-policy"
                 className="text-gray-400 hover:text-white transition-colors text-sm"
               >
                 Privacy Policy
-              </a>
-              <a
-                href="#"
+              </Link>
+              <Link
+                to="/terms-of-service"
                 className="text-gray-400 hover:text-white transition-colors text-sm"
               >
                 Terms of Service
-              </a>
+              </Link>
               <div className="text-gray-400 text-sm">
                 © 2025 UNGI SmartCards AI. Every swipe, Optimized.
               </div>

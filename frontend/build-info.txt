@@ -1,2 +1,0 @@
-Build timestamp: $(date)
-Build completed at: $(date)

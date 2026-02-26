@@ -91,7 +91,6 @@ const CardDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [userReview, setUserReview] = useState<ReviewData | null>(null);
-  const [showAllMerchants, setShowAllMerchants] = useState(false);
   const [showAllCategories, setShowAllCategories] = useState(false);
   
   // Edit suggestion modal state
@@ -200,17 +199,6 @@ const CardDetailPage: React.FC = () => {
     }
   };
 
-  const handleReviewDelete = async () => {
-    if (!userReview) return;
-    
-    try {
-      await cardReviewsAPI.deleteReview(userReview.id.toString());
-      setUserReview(null);
-      await loadReviews();
-    } catch (error) {
-      console.error('Error deleting review:', error);
-    }
-  };
 
   const handleVote = async (reviewId: string, voteType: 'helpful' | 'not_helpful') => {
     try {

@@ -66,7 +66,7 @@ class SQLAgentService:
 
             # Initialize OpenAI
             llm = ChatOpenAI(
-                model="gpt-4",
+                model=settings.OPENAI_MODEL,
                 temperature=0,
                 openai_api_key=settings.OPENAI_API_KEY
             )

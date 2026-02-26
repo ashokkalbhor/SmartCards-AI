@@ -1,55 +1,80 @@
-import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
-from app.core.database import Base, get_db
-from app.main import app
+# Import all model modules to ensure Base.metadata is fully populated before any DB setup
+import app.models.user
+import app.models.card_master_data
+import app.models.edit_suggestion
+import app.models.analytics
+
+import pytest
+import asyncio
+from typing import AsyncGenerator, Generator
+from fastapi.testclient import TestClient
+import pytest_asyncio
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.models.user import User
 from app.models.card_master_data import CardMasterData, CardSpendingCategory, CardMerchantReward
 from app.models.edit_suggestion import EditSuggestion
+from app.models.analytics import AnalyticsEvent
+
+from app.core.database import get_db, get_async_db
+from app.main import app
 from app.core.security import create_access_token
 from app.core.config import settings
 
-# Test database URL
-SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
-
-# Create test engine
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
+from tests.utils import (
+    TestingSessionLocal,
+    get_test_db,
+    get_test_sync_db,
+    init_test_db,
+    run_async
 )
 
-# Create test session
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# Override database dependencies for testing
+app.dependency_overrides[get_db] = get_test_sync_db
+app.dependency_overrides[get_async_db] = get_test_db
 
-def override_get_db():
-    """Override database dependency for testing"""
-    try:
-        db = TestingSessionLocal()
-        yield db
-    finally:
-        db.close()
+@pytest.fixture(scope="session")
+def event_loop():
+    """Create an instance of the default event loop for each test case."""
+    loop = asyncio.get_event_loop_policy().new_event_loop()
+    yield loop
+    loop.close()
 
-# Override database dependency
-app.dependency_overrides[get_db] = override_get_db
+@pytest_asyncio.fixture(autouse=True)
+async def setup_db():
+    """Initialize test database"""
+    await init_test_db()
 
 @pytest.fixture
-def db():
-    """Database fixture"""
-    Base.metadata.create_all(bind=engine)
+def db() -> Generator:
+    """Get synchronous database session"""
     db = TestingSessionLocal()
     try:
         yield db
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
     finally:
         db.close()
-        Base.metadata.drop_all(bind=engine)
+
+@pytest_asyncio.fixture
+async def async_db() -> AsyncGenerator[AsyncSession, None]:
+    """Get async database session"""
+    async for session in get_test_db():
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()
 
 @pytest.fixture
 def client():
-    """Test client fixture"""
+    """Get test client"""
     return TestClient(app)
 
 @pytest.fixture
@@ -69,7 +94,9 @@ def test_user(db):
 
 @pytest.fixture
 def test_admin_user(db):
-    """Create test admin user"""
+    """Create test admin user with admin role"""
+    from app.models.user_role import UserRole
+    
     admin = User(
         email="admin@example.com",
         first_name="Admin",
@@ -80,6 +107,16 @@ def test_admin_user(db):
     db.add(admin)
     db.commit()
     db.refresh(admin)
+    
+    # Create admin role
+    admin_role = UserRole(
+        user_id=admin.id,
+        role_type="admin",
+        status="active"
+    )
+    db.add(admin_role)
+    db.commit()
+    
     return admin
 
 @pytest.fixture
@@ -156,17 +193,23 @@ def test_merchant_reward(db, test_card):
 @pytest.fixture
 def auth_headers(test_user):
     """Create auth headers for test user"""
-    access_token = create_access_token(data={"sub": test_user.email})
+    access_token = create_access_token(str(test_user.id))
+    return {"Authorization": f"Bearer {access_token}"}
+
+@pytest.fixture
+def user_headers(test_user):
+    """Create auth headers for regular user (alias for auth_headers)"""
+    access_token = create_access_token(str(test_user.id))
     return {"Authorization": f"Bearer {access_token}"}
 
 @pytest.fixture
 def admin_headers(test_admin_user):
     """Create auth headers for admin user"""
-    access_token = create_access_token(data={"sub": test_admin_user.email})
+    access_token = create_access_token(str(test_admin_user.id))
     return {"Authorization": f"Bearer {access_token}"}
 
 @pytest.fixture
 def moderator_headers(test_moderator_user):
     """Create auth headers for moderator user"""
-    access_token = create_access_token(data={"sub": test_moderator_user.email})
-    return {"Authorization": f"Bearer {access_token}"} 
+    access_token = create_access_token(str(test_moderator_user.id))
+    return {"Authorization": f"Bearer {access_token}"}

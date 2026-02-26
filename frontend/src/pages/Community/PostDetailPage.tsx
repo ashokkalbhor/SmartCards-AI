@@ -68,6 +68,8 @@ const PostDetailPage: React.FC = () => {
     if (postId) {
       loadPost();
     }
+    // loadPost is stable; ignoring exhaustive-deps to avoid refetch loops
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [postId]);
 
   const handleVote = async (voteType: 'upvote' | 'downvote') => {
