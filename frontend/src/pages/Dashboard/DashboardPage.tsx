@@ -1,28 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { CreditCard, Banknote, ArrowUpRight, Building2, Users, ThumbsUp, MessageSquare } from 'lucide-react';
-import { formatRupees } from '../../utils/currency';
+import { CreditCard, PlusCircle, BarChart3, LayoutGrid, Users, ThumbsUp, MessageSquare } from 'lucide-react';
 import EnhancedChatBot from '../../components/UI/EnhancedChatBot';
-import { creditCardsAPI, communityAPI } from '../../services/api';
+import { creditCardsAPI, communityAPI, cardMasterAPI } from '../../services/api';
 
 const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
-  const [stats, setStats] = useState({
-    totalCards: 0,
-    totalBankAccounts: 0,
-    totalSpent: 0,
-    monthlySavings: 0,
-  });
+  const [totalUserCards, setTotalUserCards] = useState(0);
+  const [totalAvailableCards, setTotalAvailableCards] = useState(0);
   const [isChatExpanded, setIsChatExpanded] = useState(false);
 
   useEffect(() => {
     const fetchDashboardStats = async () => {
       try {
         const data = await creditCardsAPI.getDashboardStats();
-        setStats(data);
+        setTotalUserCards(data.totalCards ?? 0);
       } catch (error) {
         console.error('Error fetching dashboard stats:', error);
+      }
+    };
+
+    const fetchTotalAvailableCards = async () => {
+      try {
+        const data = await cardMasterAPI.getCards();
+        setTotalAvailableCards(data.length);
+      } catch (error) {
+        console.error('Error fetching available cards count:', error);
       }
     };
 
@@ -45,6 +49,7 @@ const DashboardPage: React.FC = () => {
     };
 
     fetchDashboardStats();
+    fetchTotalAvailableCards();
     fetchPopularCards();
     fetchTopDiscussions();
   }, []);
@@ -90,93 +95,82 @@ const DashboardPage: React.FC = () => {
         </div>
       </motion.div>
 
-      {/* Compact Stats Cards */}
+      {/* Quick Action Cards */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3 flex-shrink-0"
+        className="grid grid-cols-2 lg:grid-cols-4 gap-3 flex-shrink-0"
         {...({} as any)}
       >
-        {/* Total Cards - Made clickable */}
-        <div 
+        {/* Add Card */}
+        <div
+          onClick={() => navigate('/cards/add?mode=quick')}
+          className="group relative bg-gradient-to-br from-blue-600 to-blue-800 rounded-xl p-5 cursor-pointer overflow-hidden shadow-md hover:shadow-blue-500/30 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 border border-blue-500/30"
+        >
+          <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-xl" />
+          <div className="flex flex-col space-y-3">
+            <div className="p-2 bg-white/15 rounded-lg w-fit">
+              <PlusCircle className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <p className="text-base font-semibold text-white">Add Card</p>
+              <p className="text-xs text-blue-200 mt-0.5">Add a new card</p>
+            </div>
+          </div>
+        </div>
+
+        {/* My Cards */}
+        <div
           onClick={() => navigate('/cards')}
-          className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 cursor-pointer hover:shadow-md hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-200 group"
+          className="group relative bg-gradient-to-br from-violet-600 to-violet-800 rounded-xl p-5 cursor-pointer overflow-hidden shadow-md hover:shadow-violet-500/30 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 border border-violet-500/30"
         >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Total Cards</p>
-              <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.totalCards}</p>
+          <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-xl" />
+          <div className="flex flex-col space-y-3">
+            <div className="p-2 bg-white/15 rounded-lg w-fit">
+              <CreditCard className="h-5 w-5 text-white" />
             </div>
-            <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg group-hover:bg-blue-200 dark:group-hover:bg-blue-800 transition-colors">
-              <CreditCard className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            <div>
+              <p className="text-base font-semibold text-white">My Cards</p>
+              <p className="text-xs text-violet-200 mt-0.5">
+                {totalUserCards > 0 ? `${totalUserCards} Card${totalUserCards !== 1 ? 's' : ''}` : 'View your cards'}
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Community - New card for viewing all cards */}
-        <div 
+        {/* Compare Cards */}
+        <div
+          onClick={() => navigate('/cards/compare')}
+          className="group relative bg-gradient-to-br from-teal-600 to-teal-800 rounded-xl p-5 cursor-pointer overflow-hidden shadow-md hover:shadow-teal-500/30 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 border border-teal-500/30"
+        >
+          <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-xl" />
+          <div className="flex flex-col space-y-3">
+            <div className="p-2 bg-white/15 rounded-lg w-fit">
+              <BarChart3 className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <p className="text-base font-semibold text-white">Compare Cards</p>
+              <p className="text-xs text-teal-200 mt-0.5">Compare benefits</p>
+            </div>
+          </div>
+        </div>
+
+        {/* View All Cards */}
+        <div
           onClick={() => navigate('/all-cards')}
-          className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 cursor-pointer hover:shadow-md hover:border-teal-300 dark:hover:border-teal-600 transition-all duration-200 group"
+          className="group relative bg-gradient-to-br from-amber-500 to-amber-700 rounded-xl p-5 cursor-pointer overflow-hidden shadow-md hover:shadow-amber-500/30 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 border border-amber-400/30"
         >
-          <div className="flex items-center justify-between">
+          <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-xl" />
+          <div className="flex flex-col space-y-3">
+            <div className="p-2 bg-white/15 rounded-lg w-fit">
+              <LayoutGrid className="h-5 w-5 text-white" />
+            </div>
             <div>
-              <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Community</p>
-              <p className="text-xl font-bold text-gray-900 dark:text-white">View All</p>
-            </div>
-            <div className="p-2 bg-teal-100 dark:bg-teal-900 rounded-lg group-hover:bg-teal-200 dark:group-hover:bg-teal-800 transition-colors">
-              <Users className="h-5 w-5 text-teal-600 dark:text-teal-400" />
-            </div>
-          </div>
-        </div>
-
-        {/* Total Bank Accounts */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 relative">
-          {/* Coming Soon Banner */}
-          <div className="absolute -top-2 -right-2 bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md z-10">
-            COMING SOON
-          </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Total Bank Accounts</p>
-              <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.totalBankAccounts}</p>
-            </div>
-            <div className="p-2 bg-indigo-100 dark:bg-indigo-900 rounded-lg">
-              <Building2 className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-            </div>
-          </div>
-        </div>
-
-        {/* Total Spent */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 relative">
-          {/* Coming Soon Banner */}
-          <div className="absolute -top-2 -right-2 bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md z-10">
-            COMING SOON
-          </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Total Spent</p>
-              <p className="text-xl font-bold text-gray-900 dark:text-white">{formatRupees(stats.totalSpent)}</p>
-            </div>
-            <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-              <Banknote className="h-5 w-5 text-green-600 dark:text-green-400" />
-            </div>
-          </div>
-        </div>
-
-        {/* Monthly Savings */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 relative">
-          {/* Coming Soon Banner */}
-          <div className="absolute -top-2 -right-2 bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md z-10">
-            COMING SOON
-          </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Monthly Savings</p>
-              <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.monthlySavings}%</p>
-            </div>
-            <div className="p-2 bg-orange-100 dark:bg-orange-900 rounded-lg">
-              <ArrowUpRight className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+              <p className="text-base font-semibold text-white">View All Cards</p>
+              <p className="text-xs text-amber-200 mt-0.5">
+                {totalAvailableCards > 0 ? `${totalAvailableCards} Cards available` : 'Browse all cards'}
+              </p>
             </div>
           </div>
         </div>
