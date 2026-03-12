@@ -13,9 +13,6 @@ COPY package*.json ./
 # Install dependencies (including dev dependencies for build)
 RUN npm ci
 
-# Copy build timestamp first (for cache busting)
-COPY build-timestamp.txt ./
-
 # Copy source code (this will be affected by CACHEBUST)
 COPY . .
 
