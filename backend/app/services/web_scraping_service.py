@@ -9,7 +9,7 @@ import aiohttp
 from aiohttp import http_exceptions
 from bs4 import BeautifulSoup
 from io import BytesIO
-from PyPDF2 import PdfReader
+import pdfplumber
 import requests
 
 logger = logging.getLogger(__name__)
@@ -101,11 +101,10 @@ class WebScrapingService:
         """Extract text from PDF bytes."""
         try:
             buffer = BytesIO(data)
-            reader = PdfReader(buffer)
-            texts = []
-            for page in reader.pages:
-                page_text = page.extract_text() or ""
-                texts.append(page_text)
+            with pdfplumber.open(buffer) as pdf:
+                texts = []
+                for page in pdf.pages:
+                    texts.append(page.extract_text() or "")
             combined = "\n".join(texts).strip()
             if not combined:
                 logger.warning("PDF extracted but contained no text")

@@ -4,14 +4,12 @@ import time
 from typing import Dict, List, Optional, Any, Tuple
 from datetime import datetime
 
-from langchain.agents import create_sql_agent, AgentType
-from langchain_community.agent_toolkits import SQLDatabaseToolkit
+from langchain_community.agent_toolkits import SQLDatabaseToolkit, create_sql_agent
 from langchain_community.utilities import SQLDatabase
 from langchain_community.vectorstores import Chroma
 from langchain_openai import ChatOpenAI
 from langchain_openai import OpenAIEmbeddings
-from langchain.memory import ConversationBufferMemory
-from langchain.schema import BaseMessage
+from langchain_core.messages import BaseMessage
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -39,10 +37,6 @@ class SQLAgentService:
             # Initialize services
             self.vector_service = VectorService()
             self.cache_service = CacheService()
-            self.memory = ConversationBufferMemory(
-                memory_key="chat_history",
-                return_messages=True
-            )
             
             # Load tuning data into vector database
             await self.vector_service.load_tuning_data()
@@ -78,9 +72,8 @@ class SQLAgentService:
             self.agent = create_sql_agent(
                 llm=llm,
                 toolkit=self.toolkit,
-                agent_type=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
-                verbose=True,
-                memory=self.memory
+                agent_type="zero-shot-react-description",
+                verbose=True
             )
 
             self.logger.info("SQL Agent Service initialized successfully")
@@ -590,7 +583,7 @@ class SQLAgentService:
         try:
             # Use OpenAI's web search capabilities
             from langchain_openai import ChatOpenAI
-            from langchain.schema import HumanMessage
+            from langchain_core.messages import HumanMessage
             
             # Initialize OpenAI client
             llm = ChatOpenAI(

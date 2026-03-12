@@ -7,7 +7,7 @@ from datetime import datetime
 import logging
 from pathlib import Path
 
-import PyPDF2
+import pdfplumber
 from PIL import Image
 import pytesseract
 from fastapi import UploadFile, HTTPException
@@ -45,11 +45,10 @@ class DocumentService:
     def _extract_text_from_pdf(self, file_path: str) -> str:
         """Extract text from PDF file"""
         try:
-            with open(file_path, 'rb') as file:
-                pdf_reader = PyPDF2.PdfReader(file)
+            with pdfplumber.open(file_path) as pdf:
                 text = ""
-                for page in pdf_reader.pages:
-                    text += page.extract_text() + "\n"
+                for page in pdf.pages:
+                    text += (page.extract_text() or "") + "\n"
                 return text.strip()
         except Exception as e:
             logger.error(f"Error extracting text from PDF {file_path}: {e}")

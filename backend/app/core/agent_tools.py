@@ -1,12 +1,9 @@
 import logging
 import asyncio
-from typing import Optional, List, Dict, Any
 import json
 from io import BytesIO
 
 from langchain_core.tools import tool
-from langchain_community.tools import DuckDuckGoSearchRun
-from langchain_community.utilities import DuckDuckGoSearchAPIWrapper
 
 # PDF and Browser libraries
 import pdfplumber

@@ -61,9 +61,8 @@ class Settings(BaseSettings):
     
     # AI/ML Configuration
     OPENAI_API_KEY: Optional[str] = None
-    OPENAI_MODEL: str = "gpt-5.2"  # Latest GPT-5 model (most advanced)
-    # For web search/browsing tasks - has built-in search capabilities
-    OPENAI_BROWSE_MODEL: str = "gpt-5-search-api"
+    OPENAI_MODEL: str = "gpt-4o"
+    OPENAI_BROWSE_MODEL: str = "gpt-4o"
 
     # Search API Keys (for multi-provider search)
     TAVILY_API_KEY: Optional[str] = None
