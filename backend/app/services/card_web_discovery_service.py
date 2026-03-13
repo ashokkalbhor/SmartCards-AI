@@ -57,6 +57,12 @@ class CardWebDiscoveryService:
             "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
             "Content-Type": "application/json",
         }
+        # gpt-4.1 family uses 'web_search'; gpt-4o family requires 'web_search_preview'
+        self._web_search_tool = (
+            {"type": "web_search"}
+            if any(x in configured_model for x in ("4.1", "4-1"))
+            else {"type": "web_search_preview"}
+        )
 
     async def discover_sources(self, *, bank_name: str, card_name: str) -> WebDiscoveryResult:
         primary_messages = self._build_prompt(bank_name=bank_name, card_name=card_name)
@@ -85,7 +91,7 @@ class CardWebDiscoveryService:
         payload = {
             "model": self.model,
             "input": messages,
-            "tools": [{"type": "web_search"}],
+            "tools": [self._web_search_tool],
         }
 
         try:
@@ -179,24 +185,38 @@ class CardWebDiscoveryService:
         Returns a detailed textual summary of findings, focusing on specific merchant rewards.
         """
         system_prompt = (
-            "You are a Senior Credit Card Researcher. "
-            "Your goal is to find EXACT reward rates (in percentage) for specific merchants and categories. "
-            "Use the 'web_search' tool to find authoritative sources (official bank pages + reputable blogs like Technofino/CardExpert). "
-            "Synthesize valid data into a detailed summary."
+            "You are a Senior Credit Card Researcher for the Indian market. "
+            "Your goal is to find EXACT, current data for a specific credit card using web search. "
+            "Prefer official bank websites, then reputable sources like Technofino, CardExpert, BankBazaar. "
+            "Prefer pages dated within the last 12 months. Never guess — if data is not found, say 'Not found'."
         )
-        
+
         user_prompt = (
-            f"Perform a comprehensive deep-dive search for the '{bank_name} {card_name}' credit card.\n"
-            "**Crucial Goal**: Find exact reward rates (%) for specific Spending Categories and VIP Merchants.\n\n"
-            "**Search Targets**:\n"
-            "1. **VIP Merchants**: Specifically look for reward rates (%) for:\n"
-            "   - **Amazon, Flipkart, Swiggy, Zomato, Myntra, Uber, Ola, BigBasket, BookMyShow**.\n"
-            "2. **Categories**: Dining, Travel, Fuel, Utilities, Rent, Insurance.\n"
-            "3. **Exclusions**: Check 'Terms and Conditions' or 'Fair Usage Policy' for excluded MCCs.\n"
-            "4. **Caps**: Look for monthly/daily capping on these rewards.\n\n"
-            "**Output**: Return a detailed textual summary of these specific reward rates. "
-            "If a merchant is getting benefits via a category (e.g., 'Amazon gets 5% because it falls under Online Spend'), EXPLICITLY state that.\n"
-            "Format the summary clearly."
+            f"Perform a comprehensive research for the '{bank_name} {card_name}' credit card.\n\n"
+            "Search and report ALL of the following. Organise your response into these exact sections:\n\n"
+            "**SECTION 1 — FEES**\n"
+            "  - Joining fee (₹) — state 0 if none\n"
+            "  - Annual fee (₹) — state 0 if none\n"
+            "  - Annual fee waiver spend threshold (₹) — state 'Not found' if no waiver\n"
+            "  - Is it lifetime free? (yes/no)\n\n"
+            "**SECTION 2 — LOUNGE ACCESS**\n"
+            "  - Domestic airport lounge visits (count per year or per quarter)\n"
+            "  - International airport lounge visits (count per year or per quarter) — state 'Not found' if not offered\n"
+            "  - Minimum spend required to retain lounge access (₹ per quarter) — state 'Not found' if no requirement\n\n"
+            "**SECTION 3 — SPENDING CATEGORY RATES**\n"
+            "For each category below, report: reward rate (%) and monthly or quarterly cap (₹ and period).\n"
+            "State 'Not found' if the card has no specific rate for that category.\n"
+            "  Online Shopping, Offline Spends, Fuel, Dining, Food Delivery, Grocery,\n"
+            "  Travel, Utilities, Rent, Insurance, Education, Government Payments,\n"
+            "  International, Entertainment, Wallets\n\n"
+            "**SECTION 4 — MERCHANT RATES**\n"
+            "For each merchant below, report: reward rate (%) and monthly cap (₹ and period).\n"
+            "If a merchant earns via a category rate (e.g. 'Amazon earns 5% under Online Shopping'), state that explicitly.\n"
+            "State 'Not found' if not specifically mentioned.\n"
+            "  Amazon, Flipkart, Swiggy, Zomato, BigBasket, Blinkit, Myntra,\n"
+            "  Uber, Ola, BookMyShow, PhonePe, Airtel, Netflix, Nykaa, Ajio\n\n"
+            "**SECTION 5 — SOURCE URLS**\n"
+            "  List every URL you used to gather the above data (one per line).\n"
         )
 
         messages = [
@@ -210,12 +230,10 @@ class CardWebDiscoveryService:
             "model": self.model,
             "input": messages,
         }
-        
-        # Only add web_search tool if NOT using the specialized search API model (which implies search)
-        # Or if the model is standard GPT-4/5 which needs the tool.
-        # The error said 'web_search_preview' not supported with 'gpt-5-search-api'.
-        if "search-api" not in self.model: 
-             payload["tools"] = [{"type": "web_search"}]
+
+        # Add the correct web search tool unless model has built-in search (search-api variants)
+        if "search-api" not in self.model:
+            payload["tools"] = [self._web_search_tool]
 
         try:
             # We call _request directly to avoid JSON parsing in _invoke

@@ -90,6 +90,11 @@ class CardUpdateScheduler:
                 system_user_id,
             )
 
+            # Save source URLs as approved link documents regardless of suggestions
+            self.card_update_service.save_source_urls_as_documents(
+                db, card.id, extracted_data.get("source_urls", []), system_user_id
+            )
+
             suggestions_created = len(suggestions or [])
             if suggestions_created:
                 self._suggestions_created += suggestions_created
@@ -107,7 +112,7 @@ class CardUpdateScheduler:
                 card=card,
                 status=status,
                 suggestions_created=suggestions_created,
-                meta={"source_url": official_url},
+                meta={"source_url": (extracted_data.get("source_urls") or [None])[0] or official_url},
             )
 
         except Exception as exc:

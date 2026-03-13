@@ -241,11 +241,11 @@ class CardComparisonData(BaseModel):
     annual_fee_display: str
     annual_fee_waiver_spend: Optional[float]
     domestic_lounge_visits: Optional[int]
+    international_lounge_visits: Optional[int]
     lounge_spend_requirement: Optional[float]
     lounge_spend_period: Optional[str]
     categories: Dict[str, str] = {}  # category_name -> reward_display
     merchants: Dict[str, str] = {}  # merchant_name -> reward_display
-    additional_info: str = ""
 
     class Config:
         from_attributes = True 

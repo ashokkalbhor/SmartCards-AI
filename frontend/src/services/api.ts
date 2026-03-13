@@ -144,35 +144,6 @@ export const creditCardsAPI = {
   },
 };
 
-// Transactions API
-export const transactionsAPI = {
-  getTransactions: async () => {
-    const response = await api.get('/transactions');
-    return response.data;
-  },
-
-  addTransaction: async (transactionData: any) => {
-    const response = await api.post('/transactions', transactionData);
-    return response.data;
-  },
-};
-
-// Rewards API
-export const rewardsAPI = {
-  getRewards: async () => {
-    const response = await api.get('/rewards');
-    return response.data;
-  },
-};
-
-// Recommendations API
-export const recommendationsAPI = {
-  getRecommendations: async () => {
-    const response = await api.get('/recommendations');
-    return response.data;
-  },
-};
-
 // Card Master Data API
 export const cardMasterDataAPI = {
   getComparison: async (userCardsOnly?: boolean, cardIds?: number[]) => {
@@ -367,13 +338,23 @@ export const adminAPI = {
     return response.data;
   },
 
-  triggerCardUpdate: async (cardId: number) => {
-    const response = await api.post(`/card-updates/trigger-card/${cardId}`);
+  getMAU: async () => {
+    const response = await api.get('/admin/analytics/mau');
     return response.data;
   },
 
-  getMAU: async () => {
-    const response = await api.get('/admin/analytics/mau');
+  getTopPages: async () => {
+    const response = await api.get('/admin/analytics/top-pages');
+    return response.data;
+  },
+
+  getAvgDuration: async () => {
+    const response = await api.get('/admin/analytics/avg-duration');
+    return response.data;
+  },
+
+  triggerCardUpdate: async (cardId: number) => {
+    const response = await api.post(`/card-updates/trigger-card/${cardId}`);
     return response.data;
   },
 
@@ -515,21 +496,6 @@ export const moderatorAPI = {
 
 // User Roles API
 export const userRolesAPI = {
-  requestModerator: async (requestData: { request_reason?: string }) => {
-    const response = await api.post('/user-roles/request-moderator', requestData);
-    return response.data;
-  },
-
-  getMyModeratorRequest: async () => {
-    const response = await api.get('/user-roles/my-moderator-request');
-    return response.data;
-  },
-
-  getMyRole: async () => {
-    const response = await api.get('/user-roles/my-role');
-    return response.data;
-  },
-
   submitEditSuggestion: async (cardId: number, suggestionData: {
     field_type: string;
     field_name: string;
@@ -537,25 +503,6 @@ export const userRolesAPI = {
     suggestion_reason?: string;
   }) => {
     const response = await api.post(`/user-roles/edit-suggestions?card_id=${cardId}`, suggestionData);
-    return response.data;
-  },
-
-  getMySuggestions: async (params?: {
-    status_filter?: string;
-    skip?: number;
-    limit?: number;
-  }) => {
-    const queryParams = new URLSearchParams();
-    if (params?.status_filter) queryParams.append('status_filter', params.status_filter);
-    if (params?.skip) queryParams.append('skip', params.skip.toString());
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
-
-    const response = await api.get(`/user-roles/my-suggestions?${queryParams.toString()}`);
-    return response.data;
-  },
-
-  getMySuggestionsStats: async () => {
-    const response = await api.get('/user-roles/my-suggestions/stats');
     return response.data;
   },
 };
@@ -568,25 +515,6 @@ export const cardDocumentsAPI = {
         'Content-Type': 'multipart/form-data',
       },
     });
-    return response.data;
-  },
-
-  getMySubmissions: async (params?: {
-    status_filter?: string;
-    skip?: number;
-    limit?: number;
-  }) => {
-    const queryParams = new URLSearchParams();
-    if (params?.status_filter) queryParams.append('status_filter', params.status_filter);
-    if (params?.skip) queryParams.append('skip', params.skip.toString());
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
-
-    const response = await api.get(`/card-documents/my-submissions?${queryParams.toString()}`);
-    return response.data;
-  },
-
-  getMySubmissionsStats: async () => {
-    const response = await api.get('/card-documents/my-submissions/stats');
     return response.data;
   },
 
@@ -728,4 +656,14 @@ export const sqlAgentServiceAPI = {
   },
 };
 
-export default api; 
+export const analyticsAPI = {
+  ingestEvent: async (path: string, durationSeconds: number) => {
+    await api.post('/analytics', {
+      path,
+      duration_seconds: durationSeconds,
+      event_name: 'page_duration',
+    });
+  },
+};
+
+export default api;

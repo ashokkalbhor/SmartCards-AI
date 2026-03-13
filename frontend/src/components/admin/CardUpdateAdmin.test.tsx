@@ -1,6 +1,5 @@
 import '@testing-library/jest-dom';
 import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
-import { Modal } from 'antd';
 
 jest.mock('axios', () => {
   const request = jest.fn();
@@ -9,21 +8,6 @@ jest.mock('axios', () => {
     default: { request },
   };
 });
-
-jest.mock('antd/lib/_util/responsiveObserver', () => ({
-  __esModule: true,
-  default: () => ({
-    subscribe: () => 0,
-    unsubscribe: () => {},
-    responsiveMap: {},
-    matchHandlers: {},
-    dispatch: () => true,
-    register: () => {},
-    unregister: () => {},
-  }),
-  responsiveArray: [],
-  matchScreen: () => false,
-}));
 
 const mockedAxios = require('axios').default as { request: jest.Mock };
 
@@ -59,7 +43,6 @@ describe('CardUpdateAdmin', () => {
         dispatchEvent: jest.fn(),
       })),
     });
-    // Lazy-load component after window stubs are ready
     CardUpdateAdmin = require('./CardUpdateAdmin').default;
   });
 
@@ -90,19 +73,14 @@ describe('CardUpdateAdmin', () => {
   });
 
   afterEach(() => {
-    act(() => {
-      jest.runOnlyPendingTimers();
-    });
+    act(() => { jest.runOnlyPendingTimers(); });
     jest.useRealTimers();
     mockedAxios.request.mockReset();
     localStorage.clear();
-    Modal.destroyAll();
   });
 
   const renderAdmin = async () => {
-    await act(async () => {
-      render(<CardUpdateAdmin />);
-    });
+    await act(async () => { render(<CardUpdateAdmin />); });
   };
 
   it('fetches and displays status information on mount', async () => {
@@ -127,7 +105,7 @@ describe('CardUpdateAdmin', () => {
     await renderAdmin();
 
     fireEvent.click(await screen.findByRole('button', { name: /Trigger One Card/i }));
-    const input = await screen.findByPlaceholderText(/Enter the card ID/i);
+    const input = await screen.findByPlaceholderText(/e\.g\. 42/i);
     fireEvent.change(input, { target: { value: '123' } });
     fireEvent.click(screen.getByRole('button', { name: /Trigger Update/i }));
 
@@ -135,9 +113,7 @@ describe('CardUpdateAdmin', () => {
       expect(screen.getByText(/Update completed for Sample Card/i)).toBeInTheDocument()
     );
 
-    await act(async () => {
-      jest.advanceTimersByTime(6000);
-    });
+    await act(async () => { jest.advanceTimersByTime(6000); });
 
     await waitFor(() =>
       expect(screen.queryByText(/Update completed for Sample Card/i)).not.toBeInTheDocument()

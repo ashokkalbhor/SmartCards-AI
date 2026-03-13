@@ -3,18 +3,15 @@ Card Update Service - GenAI-powered automated card data updates
 Fetches latest card information from official bank sources and creates edit suggestions.
 """
 import logging
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any, Optional
 from datetime import datetime
 import json
-import asyncio
 
-from langchain_openai import ChatOpenAI
 from sqlalchemy.orm import Session
-from sqlalchemy import select
 
-from app.core.config import settings
 from app.models.card_master_data import CardMasterData, CardSpendingCategory, CardMerchantReward
 from app.models.edit_suggestion import EditSuggestion
+from app.models.card_document import CardDocument
 from app.models.community import CommunityPost
 from app.models.user import User
 
@@ -25,202 +22,30 @@ class CardUpdateService:
     """Service for automated card data updates using GenAI"""
     
     def __init__(self):
-        self.llm = ChatOpenAI(
-            model=settings.OPENAI_MODEL,
-            temperature=0,  # Deterministic for factual extraction
-            openai_api_key=settings.OPENAI_API_KEY
-        )
         self.system_admin_user_id = None  # Will be set to system admin user
-    
-    def _get_extraction_prompt(self, card_name: str, bank_name: str, variant: str = None) -> str:
-        """Generate the structured extraction prompt for card data"""
-        card_full_name = f"{bank_name} {card_name}"
-        if variant:
-            card_full_name += f" {variant}"
-        
-        return f"""You are a precise data extraction assistant. Extract credit card details ONLY from the provided official bank webpage content.
 
-Extract the following details for "{card_full_name}" as structured JSON. If a field is not present, use null.
-
-Return ONLY valid JSON in this exact structure:
-{{
-  "bank_name": string,
-  "card_name": string,
-  "card_variant": string or null,
-  "card_network": string (Visa/Mastercard/Amex/RuPay),
-  "card_tier": string (basic/premium/super_premium/elite),
-  "fees": {{
-    "joining_fee": number or null,
-    "annual_fee": number or null,
-    "is_lifetime_free": boolean,
-    "annual_fee_waiver_spend": number or null,
-    "foreign_transaction_fee": number or null,
-    "late_payment_fee": number or null,
-    "overlimit_fee": number or null,
-    "cash_advance_fee": number or null
-  }},
-  "lounge_benefits": {{
-    "domestic_lounge_visits": number or null,
-    "international_lounge_visits": number or null,
-    "lounge_spend_requirement": number or null,
-    "lounge_spend_period": string or null (quarterly/monthly/yearly)
-  }},
-  "welcome_benefits": {{
-    "welcome_bonus_points": number or null,
-    "welcome_bonus_spend_requirement": number or null,
-    "welcome_bonus_timeframe": number or null (days)
-  }},
-  "credit_limit": {{
-    "minimum_credit_limit": number or null,
-    "maximum_credit_limit": number or null
-  }},
-  "eligibility": {{
-    "minimum_salary": number or null,
-    "minimum_age": number or null,
-    "maximum_age": number or null
-  }},
-  "features": {{
-    "contactless_enabled": boolean,
-    "chip_enabled": boolean,
-    "mobile_wallet_support": [string] or null
-  }},
-  "insurance_benefits": [string] or null,
-  "concierge_service": boolean,
-  "milestone_benefits": [string] or null,
-  "reward_program": {{
-    "reward_program_name": string or null,
-    "reward_expiry_period": number or null (months),
-    "reward_conversion_rate": number or null,
-    "minimum_redemption_points": number or null
-  }},
-  "spending_categories": [
-    {{
-      "category_name": string,
-      "category_display_name": string,
-      "reward_rate": number,
-      "reward_type": string (cashback/points/miles),
-      "reward_cap": number or null,
-      "reward_cap_period": string or null (monthly/quarterly/yearly),
-      "minimum_transaction_amount": number or null,
-      "additional_conditions": string or null
-    }}
-  ],
-  "merchant_rewards": [
-    {{
-      "merchant_name": string,
-      "merchant_display_name": string,
-      "merchant_category": string or null,
-      "reward_rate": number,
-      "reward_type": string (cashback/points/miles),
-      "reward_cap": number or null,
-      "reward_cap_period": string or null,
-      "minimum_transaction_amount": number or null,
-      "requires_registration": boolean,
-      "additional_conditions": string or null
-    }}
-  ],
-  "description": string or null,
-  "terms_and_conditions_url": string or null,
-  "application_url": string or null,
-  "additional_features": [string] or null,
-  "source_url": string (the URL of the page this data was extracted from)
-}}
-
-CRITICAL RULES:
-- Only use information from the provided content
-- Return valid JSON only, no markdown or explanation
-- Use null for missing fields, never guess or hallucinate
-- Ensure all numeric values are numbers, not strings
-- All URLs must be complete and valid"""
-    
-    async def extract_card_data(self, page_content: str, card_name: str, 
-                                bank_name: str, variant: str = None) -> Dict[str, Any]:
-        """Extract structured card data from webpage content using GenAI"""
-        try:
-            system_prompt = self._get_extraction_prompt(card_name, bank_name, variant)
-            
-            messages = [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"Extract data from this content:\n\n{page_content}"}
-            ]
-            
-            response = await self.llm.ainvoke(messages)
-
-            raw_content = self._normalize_response_content(response.content)
-            payload = self._extract_json_block(raw_content)
-            if payload is None:
-                logger.error("Failed to parse JSON response: could not locate JSON block")
-                logger.error(f"Response content: {raw_content[:500]}")
-                raise json.JSONDecodeError("No JSON object found", raw_content, 0)
-
-            extracted_data = json.loads(payload)
-            
-            logger.info(f"Successfully extracted data for {bank_name} {card_name}")
-            return extracted_data
-            
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse JSON response: {e}")
-            logger.error(f"Response content: {raw_content[:500]}")
-            raise
-        except Exception as e:
-            logger.error(f"Error extracting card data: {e}")
-            raise
-
-    @staticmethod
-    def _normalize_response_content(content: Any) -> str:
-        if isinstance(content, str):
-            return content
-        if isinstance(content, list):
-            parts = []
-            for item in content:
-                if isinstance(item, dict):
-                    value = item.get("text")
-                    if isinstance(value, dict):
-                        parts.append(value.get("value", ""))
-                    elif isinstance(value, str):
-                        parts.append(value)
-                else:
-                    parts.append(str(item))
-            return "\n".join(parts)
-        return str(content or "")
-
-    @staticmethod
-    def _extract_json_block(text: str) -> Optional[str]:
-        text = text.strip()
-
-        if text.startswith("```"):
-            first_newline = text.find("\n")
-            if first_newline != -1:
-                closing = text.find("```", first_newline + 1)
-                if closing != -1:
-                    text = text[first_newline + 1:closing].strip()
-
-        start = text.find("{")
-        if start == -1:
-            return None
-        stack = 0
-        for idx in range(start, len(text)):
-            char = text[idx]
-            if char == "{":
-                stack += 1
-            elif char == "}":
-                stack -= 1
-                if stack == 0:
-                    return text[start:idx + 1]
-        return None
-    
-    def compare_and_create_suggestions(self, db: Session, card_id: int, 
+    def compare_and_create_suggestions(self, db: Session, card_id: int,
                                       extracted_data: Dict[str, Any],
                                       system_user_id: int) -> List[EditSuggestion]:
         """Compare extracted data with current DB and create edit suggestions for changes"""
         suggestions = []
-        
+
         # Get current card data
         card = db.query(CardMasterData).filter(CardMasterData.id == card_id).first()
         if not card:
             logger.error(f"Card {card_id} not found")
             return suggestions
-        
+
+        # Fetch existing pending suggestions to avoid duplicates
+        existing_pending = db.query(EditSuggestion).filter(
+            EditSuggestion.card_master_id == card_id,
+            EditSuggestion.status == "pending"
+        ).all()
+        pending_keys = {(s.field_type, s.field_name) for s in existing_pending}
+
+        def _is_duplicate(field_type: str, field_name: str) -> bool:
+            return (field_type, field_name) in pending_keys
+
         # Compare card-level fields
         card_field_mapping = {
             "joining_fee": ("fees", "joining_fee"),
@@ -266,7 +91,7 @@ CRITICAL RULES:
                     break
             
             # Compare values
-            if old_value != new_value and new_value is not None:
+            if old_value != new_value and new_value is not None and not _is_duplicate("card_field", db_field):
                 suggestion = EditSuggestion(
                     user_id=system_user_id,
                     card_master_id=card_id,
@@ -277,7 +102,7 @@ CRITICAL RULES:
                     status="pending",
                     suggestion_reason=f"Automated update from official source",
                     additional_data={
-                        "source_url": extracted_data.get("source_url"),
+                        "source_url": (extracted_data.get("source_urls") or [None])[0],
                         "extraction_date": datetime.utcnow().isoformat()
                     }
                 )
@@ -292,7 +117,7 @@ CRITICAL RULES:
             cat_name = new_cat.get("category_name")
             if cat_name in current_categories:
                 old_cat = current_categories[cat_name]
-                if old_cat.reward_rate != new_cat.get("reward_rate"):
+                if old_cat.reward_rate != new_cat.get("reward_rate") and not _is_duplicate("spending_category", cat_name):
                     suggestion = EditSuggestion(
                         user_id=system_user_id,
                         card_master_id=card_id,
@@ -303,13 +128,13 @@ CRITICAL RULES:
                         status="pending",
                         suggestion_reason=f"Automated update: reward rate changed",
                         additional_data={
-                            "source_url": extracted_data.get("source_url"),
+                            "source_url": (extracted_data.get("source_urls") or [None])[0],
                             "extraction_date": datetime.utcnow().isoformat(),
                             "category_data": new_cat
                         }
                     )
                     suggestions.append(suggestion)
-            else:
+            elif not _is_duplicate("spending_category", cat_name):
                 # New category
                 suggestion = EditSuggestion(
                     user_id=system_user_id,
@@ -321,7 +146,7 @@ CRITICAL RULES:
                     status="pending",
                     suggestion_reason=f"Automated update: new category added",
                     additional_data={
-                        "source_url": extracted_data.get("source_url"),
+                        "source_url": (extracted_data.get("source_urls") or [None])[0],
                         "extraction_date": datetime.utcnow().isoformat()
                     }
                 )
@@ -335,7 +160,7 @@ CRITICAL RULES:
             merch_name = new_merch.get("merchant_name")
             if merch_name in current_merchants:
                 old_merch = current_merchants[merch_name]
-                if old_merch.reward_rate != new_merch.get("reward_rate"):
+                if old_merch.reward_rate != new_merch.get("reward_rate") and not _is_duplicate("merchant_reward", merch_name):
                     suggestion = EditSuggestion(
                         user_id=system_user_id,
                         card_master_id=card_id,
@@ -346,13 +171,13 @@ CRITICAL RULES:
                         status="pending",
                         suggestion_reason=f"Automated update: reward rate changed",
                         additional_data={
-                            "source_url": extracted_data.get("source_url"),
+                            "source_url": (extracted_data.get("source_urls") or [None])[0],
                             "extraction_date": datetime.utcnow().isoformat(),
                             "merchant_data": new_merch
                         }
                     )
                     suggestions.append(suggestion)
-            else:
+            elif not _is_duplicate("merchant_reward", merch_name):
                 # New merchant
                 suggestion = EditSuggestion(
                     user_id=system_user_id,
@@ -364,7 +189,7 @@ CRITICAL RULES:
                     status="pending",
                     suggestion_reason=f"Automated update: new merchant added",
                     additional_data={
-                        "source_url": extracted_data.get("source_url"),
+                        "source_url": (extracted_data.get("source_urls") or [None])[0],
                         "extraction_date": datetime.utcnow().isoformat()
                     }
                 )
@@ -445,6 +270,40 @@ CRITICAL RULES:
             db.rollback()
             return None
     
+    def save_source_urls_as_documents(self, db: Session, card_id: int,
+                                      source_urls: List[str], system_user_id: int) -> None:
+        """Save research source URLs as approved CardDocument link entries, skipping duplicates."""
+        if not source_urls:
+            return
+
+        existing_urls = {
+            doc.content for doc in db.query(CardDocument).filter(
+                CardDocument.card_master_id == card_id,
+                CardDocument.document_type == "link"
+            ).all()
+        }
+
+        new_docs = []
+        for url in source_urls:
+            url = url.strip() if url else ""
+            if not url or url in existing_urls:
+                continue
+            new_docs.append(CardDocument(
+                user_id=system_user_id,
+                card_master_id=card_id,
+                title="Research Source",
+                document_type="link",
+                content=url,
+                submission_reason="Auto-added by card update pipeline",
+                status="approved",
+            ))
+            existing_urls.add(url)
+
+        if new_docs:
+            db.add_all(new_docs)
+            db.commit()
+            logger.info(f"Saved {len(new_docs)} source URL(s) as documents for card {card_id}")
+
     def get_or_create_system_user(self, db: Session) -> int:
         """Get or create the system admin user for automated updates"""
         system_email = "system@smartcardsai.internal"

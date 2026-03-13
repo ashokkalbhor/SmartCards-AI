@@ -15,11 +15,11 @@ interface CardData {
   annual_fee_display: string;
   annual_fee_waiver_spend: number | null;
   domestic_lounge_visits: number | null;
+  international_lounge_visits: number | null;
   lounge_spend_requirement: number | null;
   lounge_spend_period: string | null;
   categories: Record<string, string>;
   merchants: Record<string, string>;
-  additional_info: string;
 }
 
 const CardComparisonPage: React.FC = () => {
@@ -309,8 +309,7 @@ const CardComparisonPage: React.FC = () => {
           if (cellElement.textContent && (
             cellElement.textContent.includes('Spending Categories') ||
             cellElement.textContent.includes('Merchant Rewards') ||
-            cellElement.textContent.includes('Card Details') ||
-            cellElement.textContent.includes('Additional Info')
+            cellElement.textContent.includes('Card Details')
           )) {
             cellElement.style.backgroundColor = '#fff8e1';
             cellElement.style.fontWeight = 'bold';
@@ -334,8 +333,7 @@ const CardComparisonPage: React.FC = () => {
           if (firstCell && (
             firstCell.textContent?.includes('Spending Categories') ||
             firstCell.textContent?.includes('Merchant Rewards') ||
-            firstCell.textContent?.includes('Card Details') ||
-            firstCell.textContent?.includes('Additional Info')
+            firstCell.textContent?.includes('Card Details')
           )) {
             return; // Skip this row
           }
@@ -363,8 +361,7 @@ const CardComparisonPage: React.FC = () => {
           if (firstCell && (
             firstCell.textContent?.includes('Spending Categories') ||
             firstCell.textContent?.includes('Merchant Rewards') ||
-            firstCell.textContent?.includes('Card Details') ||
-            firstCell.textContent?.includes('Additional Info')
+            firstCell.textContent?.includes('Card Details')
           )) {
             return; // Skip this row
           }
@@ -400,116 +397,6 @@ const CardComparisonPage: React.FC = () => {
           }
         });
         
-        // DEBUG: Log table structure
-        console.log('=== EXPORT DEBUG ===');
-        console.log('Total rows found:', table.querySelectorAll('tbody tr').length);
-        
-        // Special handling for Additional Info row - ensure all cells in that row have proper text color
-        // This runs AFTER all other styling to override any previous font size settings
-        const additionalInfoRows = table.querySelectorAll('tbody tr');
-        console.log('Processing', additionalInfoRows.length, 'rows for Additional Info styling');
-        
-        additionalInfoRows.forEach((row, rowIndex) => {
-          const rowElement = row as HTMLElement;
-          const cells = rowElement.querySelectorAll('td');
-          
-          // Check if this is the Additional Info row - more robust detection
-          const firstCell = cells[0];
-          const isAdditionalInfoRow = firstCell && (
-            firstCell.textContent?.includes('Additional Info') ||
-            firstCell.textContent?.includes('additional_info') ||
-            firstCell.textContent?.toLowerCase().includes('additional')
-          );
-          
-          if (isAdditionalInfoRow) {
-            console.log(`Found Additional Info row at index ${rowIndex}`);
-            console.log('First cell text:', firstCell.textContent);
-            console.log('Number of cells in this row:', cells.length);
-            
-            // Style all cells in the Additional Info row for better visibility
-            cells.forEach((cell, cellIndex) => {
-              const cellElement = cell as HTMLElement;
-              const textLength = cellElement.textContent?.length || 0;
-              
-              console.log(`Cell ${cellIndex} text length:`, textLength);
-              console.log(`Cell ${cellIndex} text:`, cellElement.textContent);
-              
-              // Fixed font size for better readability
-              const fontSize = '16px';
-              
-              console.log(`Cell ${cellIndex} font size set to:`, fontSize);
-              
-              cellElement.style.color = '#000000'; // Force dark text for visibility
-              cellElement.style.fontSize = fontSize; // Fixed font size
-              cellElement.style.textAlign = 'left'; // Left align for better readability
-              cellElement.style.fontWeight = 'normal'; // Normal weight for content
-              cellElement.style.backgroundColor = '#fff8e1'; // Keep light yellow background
-              
-              console.log(`Cell ${cellIndex} styles applied:`, {
-                color: cellElement.style.color,
-                fontSize: cellElement.style.fontSize,
-                backgroundColor: cellElement.style.backgroundColor
-              });
-            });
-          }
-        });
-        
-        console.log('=== END EXPORT DEBUG ===');
-        
-        // Fallback: If Additional Info row not found by name, look for rows with long text content
-        let additionalInfoRowFound = false;
-        additionalInfoRows.forEach((row, rowIndex) => {
-          const rowElement = row as HTMLElement;
-          const cells = rowElement.querySelectorAll('td');
-          const firstCell = cells[0];
-          
-          if (firstCell && firstCell.textContent?.includes('Additional Info')) {
-            additionalInfoRowFound = true;
-          }
-        });
-        
-        if (!additionalInfoRowFound) {
-          console.log('Additional Info row not found by name, looking for rows with long text...');
-          
-          additionalInfoRows.forEach((row, rowIndex) => {
-            const rowElement = row as HTMLElement;
-            const cells = rowElement.querySelectorAll('td');
-            
-            // Check if any cell in this row has long text (typical of Additional Info)
-            let hasLongText = false;
-            cells.forEach((cell) => {
-              const cellElement = cell as HTMLElement;
-              const textLength = cellElement.textContent?.length || 0;
-              if (textLength > 50) { // Long text threshold
-                hasLongText = true;
-              }
-            });
-            
-            if (hasLongText) {
-              console.log(`Found row ${rowIndex} with long text, applying Additional Info styling`);
-              
-              cells.forEach((cell, cellIndex) => {
-                const cellElement = cell as HTMLElement;
-                const textLength = cellElement.textContent?.length || 0;
-                
-                // Fixed font size for better readability
-                const fontSize = '16px';
-                
-                cellElement.style.color = '#000000';
-                cellElement.style.fontSize = fontSize;
-                cellElement.style.textAlign = 'left';
-                cellElement.style.fontWeight = 'normal';
-                cellElement.style.backgroundColor = '#fff8e1';
-                
-                console.log(`Fallback styling applied to cell ${cellIndex}:`, {
-                  textLength,
-                  fontSize,
-                  text: cellElement.textContent?.substring(0, 50) + '...'
-                });
-              });
-            }
-          });
-        }
       }
       
       // Add branding header with personalized user info
@@ -813,9 +700,25 @@ const CardComparisonPage: React.FC = () => {
                     ))}
                   </tr>
                   <tr className="border-b border-gray-200 dark:border-gray-700">
-                    <td className="p-2 sm:p-3 font-medium sticky left-0 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white text-xs sm:text-sm z-10">Lounge Visits</td>
+                    <td className="p-2 sm:p-3 font-medium sticky left-0 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white text-xs sm:text-sm z-10">Fee Waiver Spend</td>
+                    {filteredCards.map((card) => (
+                      <td key={card.id} className="p-2 sm:p-3 text-center border-r border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white text-xs sm:text-sm">
+                        {card.annual_fee_waiver_spend ? `₹${card.annual_fee_waiver_spend.toLocaleString('en-IN')}` : '-'}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <td className="p-2 sm:p-3 font-medium sticky left-0 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white text-xs sm:text-sm z-10">Domestic Lounge</td>
                     {filteredCards.map((card) => (
                       <td key={card.id} className="p-2 sm:p-3 text-center border-r border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white text-xs sm:text-sm">{formatLoungeVisits(card)}</td>
+                    ))}
+                  </tr>
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <td className="p-2 sm:p-3 font-medium sticky left-0 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white text-xs sm:text-sm z-10">International Lounge</td>
+                    {filteredCards.map((card) => (
+                      <td key={card.id} className="p-2 sm:p-3 text-center border-r border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white text-xs sm:text-sm">
+                        {card.international_lounge_visits ? `${card.international_lounge_visits} visits/year` : '-'}
+                      </td>
                     ))}
                   </tr>
                   <tr className="border-b border-gray-200 dark:border-gray-700">
@@ -856,7 +759,7 @@ const CardComparisonPage: React.FC = () => {
                     <>
                       <tr className="bg-green-50 dark:bg-green-900/20">
                         <td className="p-2 sm:p-3 font-semibold sticky left-0 bg-green-50 dark:bg-green-900/20 border-r border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white text-xs sm:text-sm z-10" colSpan={filteredCards.length + 1}>
-                        Merchant Rewards (Top 10 Popular)
+                        Merchant Rewards (Top 15)
                       </td>
                       </tr>
                       {allMerchants.map((merchant, index) => (
@@ -880,15 +783,6 @@ const CardComparisonPage: React.FC = () => {
                     </>
                   )}
 
-                  {/* Additional Info */}
-                  <tr className="border-b border-gray-200 dark:border-gray-700">
-                    <td className="p-2 sm:p-3 font-semibold sticky left-0 bg-yellow-50 dark:bg-yellow-900/20 border-r border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white text-xs sm:text-sm z-10">Additional Info</td>
-                    {filteredCards.map((card) => (
-                      <td key={card.id} className="p-2 sm:p-3 text-xs text-center border-r border-gray-200 dark:border-gray-700 max-w-[100px] sm:max-w-[120px] text-gray-900 dark:text-white">
-                        <div className="break-words">{card.additional_info || '-'}</div>
-                      </td>
-                    ))}
-                  </tr>
                 </tbody>
               </table>
             </div>

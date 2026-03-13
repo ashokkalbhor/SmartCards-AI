@@ -4,6 +4,7 @@ API endpoints for automated card data updates
 import logging
 from typing import Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -147,12 +148,16 @@ async def get_update_status(
     return card_update_scheduler.get_status()
 
 
+class ExtractFromUrlRequest(BaseModel):
+    url: str
+    card_name: str
+    bank_name: str
+    card_variant: str = None
+
+
 @router.post("/extract-from-url")
 async def extract_from_url(
-    url: str,
-    card_name: str,
-    bank_name: str,
-    card_variant: str = None,
+    payload: ExtractFromUrlRequest,
     current_user: User = Depends(get_current_admin_user)
 ) -> Dict[str, Any]:
     """
@@ -162,29 +167,29 @@ async def extract_from_url(
     try:
         # Agent Invocation
         initial_state = {
-            "card_name": card_name,
-            "bank_name": bank_name,
-            "official_url": url,
+            "card_name": payload.card_name,
+            "bank_name": payload.bank_name,
+            "official_url": payload.url,
             "scraped_content": None,
             "extracted_data": None,
             "errors": [],
             "messages": []
         }
-        
+
         result = await card_update_graph.ainvoke(initial_state)
-        
+
         if result.get("errors") or not result.get("extracted_data"):
              error_msg = "; ".join(result.get("errors", [])) or "Agent returned no data"
              raise HTTPException(status_code=500, detail=f"Agent failed: {error_msg}")
-        
+
         return {
             "status": "success",
             "extracted_data": result["extracted_data"],
             "content_length": len(result.get("scraped_content", "") or "")
         }
-    
+
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error extracting from URL {url}: {e}", exc_info=True)
+        logger.error(f"Error extracting from URL {payload.url}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Extraction failed: {str(e)}")

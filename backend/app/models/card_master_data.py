@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, Float, ForeignKey, JSON, Enum
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, Float, ForeignKey, JSON, Enum, UniqueConstraint
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 import enum
@@ -175,7 +175,8 @@ class CardSpendingCategory(Base):
     Reward rates for different spending categories for each card
     """
     __tablename__ = "card_spending_categories"
-    
+    __table_args__ = (UniqueConstraint("card_master_id", "category_name", name="uq_card_category"),)
+
     id = Column(Integer, primary_key=True, index=True)
     card_master_id = Column(Integer, ForeignKey("card_master_data.id"), nullable=False)
     
@@ -220,7 +221,8 @@ class CardMerchantReward(Base):
     Merchant-specific reward rates for each card
     """
     __tablename__ = "card_merchant_rewards"
-    
+    __table_args__ = (UniqueConstraint("card_master_id", "merchant_name", name="uq_card_merchant"),)
+
     id = Column(Integer, primary_key=True, index=True)
     card_master_id = Column(Integer, ForeignKey("card_master_data.id"), nullable=False)
     

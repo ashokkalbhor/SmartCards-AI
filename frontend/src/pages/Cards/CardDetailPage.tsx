@@ -23,6 +23,11 @@ interface CardData {
   is_lifetime_free: boolean;
   joining_fee_display: string;
   annual_fee_display: string;
+  annual_fee_waiver_spend?: number | null;
+  domestic_lounge_visits?: number | null;
+  international_lounge_visits?: number | null;
+  lounge_spend_requirement?: number | null;
+  lounge_spend_period?: string | null;
   description?: string;
   additional_features?: any;
   spending_categories?: Array<{
@@ -347,6 +352,35 @@ const CardDetailPage: React.FC = () => {
                   </div>
                 </div>
 
+                {!!(cardData.domestic_lounge_visits || cardData.international_lounge_visits || cardData.lounge_spend_requirement) && (
+                  <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                    <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Lounge Benefits</h3>
+                    <div className="space-y-2 text-sm">
+                      {!!cardData.domestic_lounge_visits && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600 dark:text-gray-400">Domestic Lounge:</span>
+                          <span className="font-medium text-gray-900 dark:text-white">{cardData.domestic_lounge_visits} visits/year</span>
+                        </div>
+                      )}
+                      {!!cardData.international_lounge_visits && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600 dark:text-gray-400">International Lounge:</span>
+                          <span className="font-medium text-gray-900 dark:text-white">{cardData.international_lounge_visits} visits/year</span>
+                        </div>
+                      )}
+                      {!!cardData.lounge_spend_requirement && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600 dark:text-gray-400">Spend Required:</span>
+                          <span className="font-medium text-gray-900 dark:text-white">
+                            ₹{cardData.lounge_spend_requirement.toLocaleString('en-IN')}
+                            {cardData.lounge_spend_period ? `/${cardData.lounge_spend_period}` : ''}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
                   <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Reviews Summary</h3>
                   <div className="space-y-2 text-sm">
@@ -392,14 +426,25 @@ const CardDetailPage: React.FC = () => {
                           {approvedDocuments.slice(0, 3).map((doc) => (
                             <div key={doc.id} className="flex items-center justify-between bg-white dark:bg-gray-600 rounded px-2 py-1 min-w-0 flex-shrink-0">
                               <span className="text-gray-600 dark:text-gray-400 text-xs truncate mr-2">
-                                {doc.document_name}
+                                {doc.title || doc.document_name}
                               </span>
-                              <button
-                                onClick={() => handleDownloadDocument(doc.id)}
-                                className="text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 flex-shrink-0"
-                              >
-                                <Download className="w-3 h-3" />
-                              </button>
+                              {doc.document_type === 'link' ? (
+                                <a
+                                  href={doc.content}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 flex-shrink-0"
+                                >
+                                  <ExternalLink className="w-3 h-3" />
+                                </a>
+                              ) : (
+                                <button
+                                  onClick={() => handleDownloadDocument(doc.id)}
+                                  className="text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 flex-shrink-0"
+                                >
+                                  <Download className="w-3 h-3" />
+                                </button>
+                              )}
                             </div>
                           ))}
                         </div>
@@ -495,7 +540,10 @@ const CardDetailPage: React.FC = () => {
                            <User className="w-4 h-4 text-gray-400" />
                            <span className="font-medium text-gray-900 dark:text-white">{review.user_name}</span>
                            {review.is_verified_cardholder && (
-                             <CheckCircle className="w-4 h-4 text-green-500" />
+                             <span className="flex items-center space-x-1 text-green-600 dark:text-green-400 text-xs font-medium">
+                               <CheckCircle className="w-3.5 h-3.5" />
+                               <span>Verified Cardholder</span>
+                             </span>
                            )}
                          </div>
                          <div className="flex items-center space-x-1">

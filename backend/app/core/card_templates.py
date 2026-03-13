@@ -186,7 +186,7 @@ def get_default_merchant_rewards(card_tier: str, bank_name: str) -> List[Dict[st
         market_data = merchant_popularity_service.get_merchant_market_data(merchant_name)
         if market_data:
             popular_merchants.append({
-                "merchant_name": merchant_name,
+                "merchant_name": merchant_name.lower().strip(),
                 "merchant_display_name": market_data.display_name,
                 "merchant_category": market_data.category,
                 "popularity_rank": rank,
@@ -216,30 +216,3 @@ def get_default_merchant_rewards(card_tier: str, bank_name: str) -> List[Dict[st
     
     return popular_merchants
 
-def create_default_spending_categories_for_card(card_id: int, card_tier: str, bank_name: str) -> List[Dict[str, Any]]:
-    """
-    Create default spending categories for a specific card.
-    Returns a list of category dictionaries that can be used to create CardSpendingCategory objects.
-    """
-    categories = get_default_spending_categories(card_tier, bank_name)
-    
-    # Add card_master_id to each category
-    for category in categories:
-        category["card_master_id"] = card_id
-        category["reward_display"] = f"{category['reward_rate']}% {category['reward_type']}"
-    
-    return categories
-
-def create_default_merchant_rewards_for_card(card_id: int, card_tier: str, bank_name: str) -> List[Dict[str, Any]]:
-    """
-    Create default merchant rewards for a specific card.
-    Returns a list of merchant reward dictionaries that can be used to create CardMerchantReward objects.
-    """
-    merchants = get_default_merchant_rewards(card_tier, bank_name)
-    
-    # Add card_master_id to each merchant
-    for merchant in merchants:
-        merchant["card_master_id"] = card_id
-        merchant["reward_display"] = f"{merchant['reward_rate']}% {merchant['reward_type']}"
-    
-    return merchants 
