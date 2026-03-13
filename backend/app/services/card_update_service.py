@@ -113,8 +113,18 @@ class CardUpdateService:
         current_categories = {cat.category_name: cat for cat in card.spending_categories}
         new_categories = extracted_data.get("spending_categories", [])
         
+        MAX_SANE_REWARD_RATE = 30.0  # anything above 30% is almost certainly a raw multiplier, not effective cashback
+
         for new_cat in new_categories:
             cat_name = new_cat.get("category_name")
+            raw_rate = new_cat.get("reward_rate")
+            if raw_rate is not None and raw_rate > MAX_SANE_REWARD_RATE:
+                logger.warning(
+                    f"Skipping spending_category '{cat_name}' for card {card_id}: "
+                    f"reward_rate {raw_rate}% exceeds sanity cap {MAX_SANE_REWARD_RATE}% — "
+                    f"likely a raw points multiplier, not effective cashback."
+                )
+                continue
             if cat_name in current_categories:
                 old_cat = current_categories[cat_name]
                 if old_cat.reward_rate != new_cat.get("reward_rate") and not _is_duplicate("spending_category", cat_name):
@@ -158,6 +168,14 @@ class CardUpdateService:
         
         for new_merch in new_merchants:
             merch_name = new_merch.get("merchant_name")
+            raw_merch_rate = new_merch.get("reward_rate")
+            if raw_merch_rate is not None and raw_merch_rate > MAX_SANE_REWARD_RATE:
+                logger.warning(
+                    f"Skipping merchant_reward '{merch_name}' for card {card_id}: "
+                    f"reward_rate {raw_merch_rate}% exceeds sanity cap {MAX_SANE_REWARD_RATE}% — "
+                    f"likely a raw points multiplier, not effective cashback."
+                )
+                continue
             if merch_name in current_merchants:
                 old_merch = current_merchants[merch_name]
                 if old_merch.reward_rate != new_merch.get("reward_rate") and not _is_duplicate("merchant_reward", merch_name):
