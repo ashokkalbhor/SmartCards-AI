@@ -151,6 +151,7 @@ const AdminDashboardPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'moderators' | 'suggestions' | 'documents' | 'chat-approvals'>('overview');
   const [isAddCardModalOpen, setIsAddCardModalOpen] = useState(false);
   const [addCardLoading, setAddCardLoading] = useState(false);
+  const [addCardSuccessMessage, setAddCardSuccessMessage] = useState<string | null>(null);
   const [addCardFormData, setAddCardFormData] = useState({
     bank_name: '',
     card_name: '',
@@ -369,10 +370,12 @@ const AdminDashboardPage: React.FC = () => {
         official_url: '',
       });
       await fetchAdminData();
-      alert('Card created successfully! The AI agent has been triggered to fetch details.');
+      setAddCardSuccessMessage(`Card added! Details are being fetched by the AI agent — this may take up to a minute.`);
+      setTimeout(() => setAddCardSuccessMessage(null), 8000);
     } catch (error) {
       console.error('Error adding card:', error);
-      alert('Failed to add card. Check console for details.');
+      setAddCardSuccessMessage('❌ Failed to add card. Check console for details.');
+      setTimeout(() => setAddCardSuccessMessage(null), 5000);
     } finally {
       setAddCardLoading(false);
     }
@@ -400,6 +403,17 @@ const AdminDashboardPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Success / Error Toast Banner */}
+      {addCardSuccessMessage && (
+        <div className={`fixed top-4 right-4 z-50 flex items-start gap-3 px-5 py-4 rounded-xl shadow-lg text-sm font-medium max-w-sm transition-all ${
+          addCardSuccessMessage.startsWith('❌')
+            ? 'bg-red-50 dark:bg-red-900/40 border border-red-200 dark:border-red-700 text-red-800 dark:text-red-200'
+            : 'bg-green-50 dark:bg-green-900/40 border border-green-200 dark:border-green-700 text-green-800 dark:text-green-200'
+        }`}>
+          <span className="text-base leading-none mt-0.5">{addCardSuccessMessage.startsWith('❌') ? '❌' : '✅'}</span>
+          <span>{addCardSuccessMessage.startsWith('❌') ? addCardSuccessMessage.slice(2).trim() : addCardSuccessMessage}</span>
+        </div>
+      )}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8 flex justify-between items-center">
