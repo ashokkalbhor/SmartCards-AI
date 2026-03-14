@@ -1,5 +1,5 @@
 from typing import List, Optional
-from app.core.card_templates import create_default_spending_categories_for_card, create_default_merchant_rewards_for_card
+from app.core.allowed_names import validate_category_name, validate_merchant_name, ORDERED_CATEGORIES, ORDERED_MERCHANTS
 from app.core.config import settings
 from app.core.merchant_popularity import merchant_popularity_service
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -87,30 +87,15 @@ def get_card_master_data_by_id(card_id: int, db: Session = Depends(get_db)):
         joinedload(CardMasterData.merchant_rewards)
     ).filter(CardMasterData.id == card_id).first()
     
-        # Always show all spending categories and merchant rewards with default values
-        # Get existing data and merge with default templates
-        existing_categories = {cat.category_name: cat for cat in card_with_relations.spending_categories}
-        existing_merchants = {merchant.merchant_name: merchant for merchant in card_with_relations.merchant_rewards}
-        
-        # Get default templates
-        default_categories = create_default_spending_categories_for_card(
-            card_id, 
-            card_with_relations.card_tier or "basic", 
-            card_with_relations.bank_name
-        )
-        
-        default_merchants = create_default_merchant_rewards_for_card(
-            card_id, 
-            card_with_relations.card_tier or "basic", 
-            card_with_relations.bank_name
-        )
-        
-        # Merge existing data with defaults, showing "N/A" for missing data
+        # Build lookup dicts from DB records, keyed by normalized name
+        existing_categories = {cat.category_name.lower().strip(): cat for cat in card_with_relations.spending_categories}
+        existing_merchants = {merchant.merchant_name.lower().strip(): merchant for merchant in card_with_relations.merchant_rewards}
+
+        # Merge against the canonical 15-slot lists — nothing outside these lists is shown
         merged_categories = []
-        for default_cat in default_categories:
-            if default_cat["category_name"] in existing_categories:
-                # Use existing data
-                existing_cat = existing_categories[default_cat["category_name"]]
+        for category_name in ORDERED_CATEGORIES:
+            existing_cat = existing_categories.get(category_name.lower().strip())
+            if existing_cat:
                 merged_categories.append({
                     "id": existing_cat.id,
                     "card_master_id": existing_cat.card_master_id,
@@ -127,34 +112,32 @@ def get_card_master_data_by_id(card_id: int, db: Session = Depends(get_db)):
                     "additional_conditions": existing_cat.additional_conditions,
                     "created_at": existing_cat.created_at,
                     "updated_at": existing_cat.updated_at,
-                    "reward_display": f"{existing_cat.reward_rate}%"
+                    "reward_display": f"{existing_cat.reward_rate}%" if existing_cat.reward_rate is not None else "Not Available"
                 })
             else:
-                # Use default with "Not Available" indicator
                 merged_categories.append({
                     "id": None,
                     "card_master_id": card_id,
-                    "category_name": default_cat["category_name"],
-                    "category_display_name": default_cat["category_display_name"],
-                    "reward_rate": 0.0,  # Not Available
+                    "category_name": category_name,
+                    "category_display_name": category_name.title(),
+                    "reward_rate": 0.0,
                     "reward_type": "points",
                     "reward_cap": None,
                     "reward_cap_period": None,
                     "minimum_transaction_amount": None,
-                    "is_active": False,  # Mark as inactive for Not Available
+                    "is_active": False,
                     "valid_from": None,
                     "valid_until": None,
-                    "additional_conditions": "Not Available - No data available",
+                    "additional_conditions": None,
                     "created_at": None,
                     "updated_at": None,
                     "reward_display": "Not Available"
                 })
-        
+
         merged_merchants = []
-        for default_merchant in default_merchants:
-            if default_merchant["merchant_name"] in existing_merchants:
-                # Use existing data
-                existing_merchant = existing_merchants[default_merchant["merchant_name"]]
+        for merchant_name in ORDERED_MERCHANTS:
+            existing_merchant = existing_merchants.get(merchant_name.lower().strip())
+            if existing_merchant:
                 merged_merchants.append({
                     "id": existing_merchant.id,
                     "card_master_id": existing_merchant.card_master_id,
@@ -173,26 +156,25 @@ def get_card_master_data_by_id(card_id: int, db: Session = Depends(get_db)):
                     "additional_conditions": existing_merchant.additional_conditions,
                     "created_at": existing_merchant.created_at,
                     "updated_at": existing_merchant.updated_at,
-                    "reward_display": f"{existing_merchant.reward_rate}%"
+                    "reward_display": f"{existing_merchant.reward_rate}%" if existing_merchant.reward_rate is not None else "Not Available"
                 })
             else:
-                # Use default with "Not Available" indicator
                 merged_merchants.append({
                     "id": None,
                     "card_master_id": card_id,
-                    "merchant_name": default_merchant["merchant_name"],
-                    "merchant_display_name": default_merchant["merchant_display_name"],
-                    "merchant_category": default_merchant["merchant_category"],
-                    "reward_rate": 0.0,  # Not Available
+                    "merchant_name": merchant_name,
+                    "merchant_display_name": merchant_name.title(),
+                    "merchant_category": None,
+                    "reward_rate": 0.0,
                     "reward_type": "cashback",
                     "reward_cap": None,
                     "reward_cap_period": None,
                     "minimum_transaction_amount": None,
-                    "is_active": False,  # Mark as inactive for Not Available
+                    "is_active": False,
                     "valid_from": None,
                     "valid_until": None,
                     "requires_registration": False,
-                    "additional_conditions": "Not Available - No data available",
+                    "additional_conditions": None,
                     "created_at": None,
                     "updated_at": None,
                     "reward_display": "Not Available"
@@ -352,12 +334,17 @@ def create_spending_category(
     if not card:
         raise HTTPException(status_code=404, detail="Card not found")
     
+    try:
+        category_data.category_name = validate_category_name(category_data.category_name)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
     category_data.card_master_id = card_id
     db_category = CardSpendingCategory(**category_data.dict())
     db.add(db_category)
     db.commit()
     db.refresh(db_category)
-    
+
     return db_category
 
 
@@ -414,12 +401,17 @@ def create_merchant_reward(
     if not card:
         raise HTTPException(status_code=404, detail="Card not found")
     
+    try:
+        merchant_data.merchant_name = validate_merchant_name(merchant_data.merchant_name)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
     merchant_data.card_master_id = card_id
     db_merchant = CardMerchantReward(**merchant_data.dict())
     db.add(db_merchant)
     db.commit()
     db.refresh(db_merchant)
-    
+
     return db_merchant
 
 
@@ -556,7 +548,7 @@ def get_card_comparison_data(
     for card in cards:
         for category in card.spending_categories:
             if category.is_active:
-                category_name = category.category_name
+                category_name = category.category_name.lower().strip()
                 if category_name not in category_popularity:
                     category_popularity[category_name] = {
                         'total_cards': 0,
@@ -572,7 +564,7 @@ def get_card_comparison_data(
         
         for merchant in card.merchant_rewards:
             if merchant.is_active:
-                merchant_name = merchant.merchant_name
+                merchant_name = merchant.merchant_name.lower().strip()
                 if merchant_name not in merchant_popularity:
                     merchant_popularity[merchant_name] = {
                         'total_cards': 0,
@@ -612,48 +604,23 @@ def get_card_comparison_data(
                 reward_score * settings.POPULARITY_REWARD_WEIGHT + 
                 max_reward_bonus * settings.POPULARITY_MAX_REWARD_WEIGHT)
     
-    # Sort categories by traditional method
-    sorted_categories = sorted(
-        category_popularity.keys(),
-        key=lambda x: calculate_category_popularity_score(category_popularity[x]),
-        reverse=True
-    )
-    
-    # Sort merchants by enhanced market research-based popularity
-    sorted_merchants = sorted(
-        merchant_popularity.keys(),
-        key=lambda x: calculate_enhanced_popularity_score(x, merchant_popularity[x]),
-        reverse=True
-    )
-    
-    # Limit merchants to top N for better usability
-    top_merchants = sorted_merchants[:settings.TOP_MERCHANTS_LIMIT]
-    
+    # Use fixed ordered lists — always show all 15 categories and 15 merchants
     # Format data for comparison page
     comparison_data = []
     for card in cards:
-        # Build categories dict (sorted by popularity)
+        # Build categories dict using canonical ordered list
         categories = {}
-        for category_name in sorted_categories:
-            category = next((c for c in card.spending_categories if c.category_name == category_name and c.is_active), None)
+        for category_name in ORDERED_CATEGORIES:
+            category = next((c for c in card.spending_categories if c.category_name.lower().strip() == category_name and c.is_active), None)
             if category:
                 categories[category_name] = category.reward_display
-        
-        # Build merchants dict (only top N popular merchants)
+
+        # Build merchants dict using canonical ordered list
         merchants = {}
-        for merchant_name in top_merchants:
-            merchant = next((m for m in card.merchant_rewards if m.merchant_name == merchant_name and m.is_active), None)
+        for merchant_name in ORDERED_MERCHANTS:
+            merchant = next((m for m in card.merchant_rewards if m.merchant_name.lower().strip() == merchant_name and m.is_active), None)
             if merchant:
                 merchants[merchant_name] = merchant.reward_display
-        
-        # Build additional info
-        additional_info_parts = []
-        if card.annual_fee_waiver_spend:
-            additional_info_parts.append(f"Annual fee waived on ₹{card.annual_fee_waiver_spend:,.0f} spend")
-        if card.reward_program_name:
-            additional_info_parts.append(f"Reward Program: {card.reward_program_name}")
-        if card.minimum_salary:
-            additional_info_parts.append(f"Min. salary: ₹{card.minimum_salary:,.0f}")
         
         comparison_item = CardComparisonData(
             id=card.id,
@@ -664,11 +631,11 @@ def get_card_comparison_data(
             annual_fee_display=card.annual_fee_display,
             annual_fee_waiver_spend=card.annual_fee_waiver_spend,
             domestic_lounge_visits=card.domestic_lounge_visits,
+            international_lounge_visits=card.international_lounge_visits,
             lounge_spend_requirement=card.lounge_spend_requirement,
             lounge_spend_period=card.lounge_spend_period,
             categories=categories,
             merchants=merchants,
-            additional_info=" | ".join(additional_info_parts)
         )
         comparison_data.append(comparison_item)
     

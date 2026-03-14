@@ -4,7 +4,7 @@ from sqlalchemy import func, desc, asc
 from typing import List, Optional
 from datetime import datetime, timedelta
 from app.core.database import get_db
-from app.core.security import get_current_user
+from app.core.security import get_current_user, get_optional_current_user
 from app.models.user import User
 from app.models.community import CommunityPost, CommunityComment, PostVote, CommentVote
 from app.models.card_master_data import CardMasterData
@@ -75,20 +75,21 @@ def get_card_posts(
     skip: int = Query(0, ge=0),
     limit: int = Query(10, ge=1, le=100),
     sort_by: str = Query("newest", regex="^(newest|oldest|votes)$"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_current_user)
 ):
     """Get posts for a specific card with sorting options"""
     # Check if card exists
     card = db.query(CardMasterData).filter(CardMasterData.id == card_id).first()
     if not card:
         raise HTTPException(status_code=404, detail="Card not found")
-    
+
     # Build query
     query = db.query(CommunityPost).filter(
         CommunityPost.card_master_id == card_id,
         CommunityPost.is_deleted == False
     )
-    
+
     # Apply sorting
     if sort_by == "newest":
         query = query.order_by(desc(CommunityPost.created_at))
@@ -96,13 +97,21 @@ def get_card_posts(
         query = query.order_by(asc(CommunityPost.created_at))
     elif sort_by == "votes":
         query = query.order_by(desc(CommunityPost.upvotes - CommunityPost.downvotes))
-    
+
     total_count = query.count()
     posts = query.offset(skip).limit(limit).all()
-    
+
     # Convert to response format
     post_responses = []
     for post in posts:
+        user_vote = None
+        if current_user:
+            vote = db.query(PostVote).filter(
+                PostVote.user_id == current_user.id,
+                PostVote.post_id == post.id
+            ).first()
+            user_vote = vote.vote_type if vote else None
+
         post_responses.append(PostResponse(
             id=post.id,
             user_id=post.user_id,
@@ -115,9 +124,10 @@ def get_card_posts(
             net_votes=post.net_votes,
             comment_count=post.comment_count,
             created_at=post.created_at,
-            updated_at=post.updated_at or post.created_at
+            updated_at=post.updated_at or post.created_at,
+            user_vote=user_vote
         ))
-    
+
     return PostList(posts=post_responses, total_count=total_count)
 
 @router.post("/cards/{card_id}/posts", response_model=PostResponse)
@@ -163,26 +173,36 @@ def create_post(
 @router.get("/posts/{post_id}", response_model=PostDetail)
 def get_post_detail(
     post_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_current_user)
 ):
     """Get detailed post with all comments"""
     post = db.query(CommunityPost).filter(
         CommunityPost.id == post_id,
         CommunityPost.is_deleted == False
     ).first()
-    
+
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
-    
+
     # Get all comments for this post
     comments = db.query(CommunityComment).filter(
         CommunityComment.post_id == post_id,
         CommunityComment.is_deleted == False
     ).order_by(asc(CommunityComment.created_at)).all()
-    
+
     # Build comment tree
     comment_tree = build_comment_tree(comments)
-    
+
+    # Resolve user's vote on this post
+    user_vote = None
+    if current_user:
+        vote = db.query(PostVote).filter(
+            PostVote.user_id == current_user.id,
+            PostVote.post_id == post_id
+        ).first()
+        user_vote = vote.vote_type if vote else None
+
     return PostDetail(
         id=post.id,
         user_id=post.user_id,
@@ -193,10 +213,11 @@ def get_post_detail(
         upvotes=post.upvotes,
         downvotes=post.downvotes,
         net_votes=post.net_votes,
-        comment_count=post.comment_count,
+        comment_count=len(comments),
         created_at=post.created_at,
         updated_at=post.updated_at or post.created_at,
-        comments=comment_tree
+        comments=comment_tree,
+        user_vote=user_vote
     )
 
 @router.put("/posts/{post_id}", response_model=PostResponse)
@@ -386,12 +407,16 @@ def delete_comment(
     
     # Soft delete
     comment.is_deleted = True
-    
-    # Update post comment count
+    db.flush()
+
+    # Resync comment count from actual active comments to prevent drift
     post = db.query(CommunityPost).filter(CommunityPost.id == comment.post_id).first()
     if post:
-        post.comment_count = max(0, post.comment_count - 1)
-    
+        post.comment_count = db.query(CommunityComment).filter(
+            CommunityComment.post_id == comment.post_id,
+            CommunityComment.is_deleted == False
+        ).count()
+
     db.commit()
     
     return {"message": "Comment deleted successfully"}

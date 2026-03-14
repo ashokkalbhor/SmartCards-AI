@@ -94,22 +94,44 @@ async def extract_structured_data(state: CardUpdateState):
         
         full_json_schema = """
         {
-          "joining_fee": number,
-          "annual_fee": number,
-          "is_lifetime_free": boolean,
+          "fees": {
+            "joining_fee": number or null,
+            "annual_fee": number or null,
+            "is_lifetime_free": boolean,
+            "annual_fee_waiver_spend": number or null
+          },
+          "lounge_benefits": {
+            "domestic_lounge_visits": number or null,
+            "international_lounge_visits": number or null,
+            "lounge_spend_requirement": number or null,
+            "lounge_spend_period": string or null
+          },
           "spending_categories": [
-            { "category_name": string, "reward_rate": number, "reward_type": string, "reward_cap": number }
+            {
+              "category_name": string — MUST be one of exactly these 15 values:
+                online shopping, offline spends, fuel, dining, food delivery, grocery,
+                travel, utilities, rent, insurance, education, government payments,
+                international, entertainment, wallets. Never invent new names. If no match, omit.
+              "reward_rate": number,
+              "reward_cap": number or null,
+              "reward_cap_period": string or null
+            }
           ],
           "merchant_rewards": [
-            { "merchant_name": string, "reward_rate": number }
+            {
+              "merchant_name": string — MUST be one of exactly these 15 values:
+                amazon, flipkart, swiggy, zomato, bigbasket, blinkit, myntra,
+                uber, ola, bookmyshow, phonepe, airtel, netflix, nykaa, ajio.
+                Only include if the card explicitly rewards this merchant. Never invent.
+              "reward_rate": number,
+              "reward_cap": number or null,
+              "reward_cap_period": string or null
+            }
           ],
-          "lounge_benefits": { "domestic_lounge_visits": number, "international_lounge_visits": number },
-          "welcome_benefits": { "welcome_bonus_points": number },
-          "eligibility": { "minimum_salary": number },
-           "source_url": string
+          "source_urls": [string] — all URLs from Section 5, empty array if none
         }
         """
-        
+
         msgs = [
             SystemMessage(content=f"Extract credit card data from the text into this JSON structure: {full_json_schema}. Only return JSON."),
             HumanMessage(content=user_msg)
@@ -118,9 +140,9 @@ async def extract_structured_data(state: CardUpdateState):
         response = await llm_json.ainvoke(msgs)
         json_data = json.loads(response.content)
         
-        # Inject the source URL if missed
-        if not json_data.get("source_url"):
-            json_data["source_url"] = state['official_url']
+        # Inject the official URL into source_urls if the model returned none
+        if not json_data.get("source_urls") and state.get("official_url"):
+            json_data["source_urls"] = [state["official_url"]]
             
         return {
             "extracted_data": json_data,

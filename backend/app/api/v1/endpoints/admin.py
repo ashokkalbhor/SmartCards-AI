@@ -22,6 +22,7 @@ from app.schemas.user_role import (
 from app.schemas.edit_suggestion import EditSuggestionResponse, EditSuggestionStats, EditSuggestionUpdate
 from app.schemas.card_document import CardDocumentResponse, CardDocumentStats, CardDocumentUpdate
 from app.schemas.chat_schemas import ChatAccessRequestListResponse
+from app.core.allowed_names import validate_category_name, validate_merchant_name
 from datetime import datetime, timedelta
 import json
 
@@ -184,7 +185,7 @@ def review_moderator_request(
 @router.get("/edit-suggestions", response_model=List[EditSuggestionResponse])
 def get_edit_suggestions(
     status_filter: Optional[str] = Query(None, regex="^(pending|approved|rejected)$"),
-    field_type: Optional[str] = Query(None, regex="^(spending_category|merchant_reward)$"),
+    field_type: Optional[str] = Query(None, regex="^(spending_category|spending_category_cap|merchant_reward|merchant_reward_cap|basic_info)$"),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     db: Session = Depends(get_db),
@@ -292,6 +293,11 @@ def review_edit_suggestion(
                     if display_name:
                         category.category_display_name = display_name
                 else:
+                    # Validate against whitelist before creating
+                    try:
+                        validate_category_name(suggestion.field_name)
+                    except ValueError as e:
+                        raise HTTPException(status_code=400, detail=str(e))
                     # Create new category
                     new_category = CardSpendingCategory(
                         card_master_id=suggestion.card_master_id,
@@ -366,7 +372,11 @@ def review_edit_suggestion(
                     if conditions_val: merchant.additional_conditions = conditions_val
                     if display_name_val: merchant.merchant_display_name = display_name_val
                 else:
-                    # Create new merchant
+                    # Validate against whitelist before creating
+                    try:
+                        validate_merchant_name(suggestion.field_name)
+                    except ValueError as e:
+                        raise HTTPException(status_code=400, detail=str(e))
                     # Try to get defaults first
                     from app.core.card_templates import get_default_merchant_rewards
                     

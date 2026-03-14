@@ -52,11 +52,6 @@ const Breadcrumb: React.FC = () => {
         'add': 'Add Card',
         'compare': 'Compare Cards',
         'edit': 'Edit Card',
-        'transactions': 'Transactions',
-        'rewards': 'Rewards',
-        'recommendations': 'Recommendations',
-        'profile': 'Profile',
-        'settings': 'Settings',
         'login': 'Login',
         'register': 'Register',
         'about': 'About',
@@ -109,7 +104,7 @@ const Breadcrumb: React.FC = () => {
   }
 
   return (
-    <nav className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-3">
+    <nav className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-1.5">
       <div className="w-full">
         <ol className="flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm overflow-x-auto">
           {breadcrumbs.map((breadcrumb, index) => (

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { CreditCard, PlusCircle, BarChart3, LayoutGrid, Users, ThumbsUp, MessageSquare } from 'lucide-react';
 import EnhancedChatBot from '../../components/UI/EnhancedChatBot';
-import { creditCardsAPI, communityAPI, cardMasterAPI } from '../../services/api';
+import { creditCardsAPI, communityAPI, cardMasterDataAPI } from '../../services/api';
 
 const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
@@ -23,7 +23,7 @@ const DashboardPage: React.FC = () => {
 
     const fetchTotalAvailableCards = async () => {
       try {
-        const data = await cardMasterAPI.getCards();
+        const data = await cardMasterDataAPI.getCards();
         setTotalAvailableCards(data.length);
       } catch (error) {
         console.error('Error fetching available cards count:', error);
@@ -77,7 +77,7 @@ const DashboardPage: React.FC = () => {
   }>>([]);
 
   return (
-    <div className="min-h-screen flex flex-col p-4 space-y-4">
+    <div className="h-full flex flex-col p-4 gap-4 lg:overflow-hidden">
       {/* Compact Header */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -106,16 +106,16 @@ const DashboardPage: React.FC = () => {
         {/* Add Card */}
         <div
           onClick={() => navigate('/cards/add?mode=quick')}
-          className="group relative bg-gradient-to-br from-blue-600 to-blue-800 rounded-xl p-5 cursor-pointer overflow-hidden shadow-md hover:shadow-blue-500/30 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 border border-blue-500/30"
+          className="group relative bg-gradient-to-br from-blue-600 to-blue-800 rounded-xl px-4 py-3 cursor-pointer overflow-hidden shadow-md hover:shadow-blue-500/30 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 border border-blue-500/30"
         >
           <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-xl" />
-          <div className="flex flex-col space-y-3">
-            <div className="p-2 bg-white/15 rounded-lg w-fit">
+          <div className="flex items-center space-x-3">
+            <div className="p-1.5 bg-white/15 rounded-lg flex-shrink-0">
               <PlusCircle className="h-5 w-5 text-white" />
             </div>
             <div>
-              <p className="text-base font-semibold text-white">Add Card</p>
-              <p className="text-xs text-blue-200 mt-0.5">Add a new card</p>
+              <p className="text-sm font-semibold text-white">Add Card</p>
+              <p className="text-xs text-blue-200">Add a new card</p>
             </div>
           </div>
         </div>
@@ -123,16 +123,16 @@ const DashboardPage: React.FC = () => {
         {/* My Cards */}
         <div
           onClick={() => navigate('/cards')}
-          className="group relative bg-gradient-to-br from-violet-600 to-violet-800 rounded-xl p-5 cursor-pointer overflow-hidden shadow-md hover:shadow-violet-500/30 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 border border-violet-500/30"
+          className="group relative bg-gradient-to-br from-violet-600 to-violet-800 rounded-xl px-4 py-3 cursor-pointer overflow-hidden shadow-md hover:shadow-violet-500/30 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 border border-violet-500/30"
         >
           <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-xl" />
-          <div className="flex flex-col space-y-3">
-            <div className="p-2 bg-white/15 rounded-lg w-fit">
+          <div className="flex items-center space-x-3">
+            <div className="p-1.5 bg-white/15 rounded-lg flex-shrink-0">
               <CreditCard className="h-5 w-5 text-white" />
             </div>
             <div>
-              <p className="text-base font-semibold text-white">My Cards</p>
-              <p className="text-xs text-violet-200 mt-0.5">
+              <p className="text-sm font-semibold text-white">My Cards</p>
+              <p className="text-xs text-violet-200">
                 {totalUserCards > 0 ? `${totalUserCards} Card${totalUserCards !== 1 ? 's' : ''}` : 'View your cards'}
               </p>
             </div>
@@ -142,16 +142,16 @@ const DashboardPage: React.FC = () => {
         {/* Compare Cards */}
         <div
           onClick={() => navigate('/cards/compare')}
-          className="group relative bg-gradient-to-br from-teal-600 to-teal-800 rounded-xl p-5 cursor-pointer overflow-hidden shadow-md hover:shadow-teal-500/30 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 border border-teal-500/30"
+          className="group relative bg-gradient-to-br from-teal-600 to-teal-800 rounded-xl px-4 py-3 cursor-pointer overflow-hidden shadow-md hover:shadow-teal-500/30 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 border border-teal-500/30"
         >
           <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-xl" />
-          <div className="flex flex-col space-y-3">
-            <div className="p-2 bg-white/15 rounded-lg w-fit">
+          <div className="flex items-center space-x-3">
+            <div className="p-1.5 bg-white/15 rounded-lg flex-shrink-0">
               <BarChart3 className="h-5 w-5 text-white" />
             </div>
             <div>
-              <p className="text-base font-semibold text-white">Compare Cards</p>
-              <p className="text-xs text-teal-200 mt-0.5">Compare benefits</p>
+              <p className="text-sm font-semibold text-white">Compare Cards</p>
+              <p className="text-xs text-teal-200">Compare benefits</p>
             </div>
           </div>
         </div>
@@ -159,16 +159,16 @@ const DashboardPage: React.FC = () => {
         {/* View All Cards */}
         <div
           onClick={() => navigate('/all-cards')}
-          className="group relative bg-gradient-to-br from-amber-500 to-amber-700 rounded-xl p-5 cursor-pointer overflow-hidden shadow-md hover:shadow-amber-500/30 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 border border-amber-400/30"
+          className="group relative bg-gradient-to-br from-amber-500 to-amber-700 rounded-xl px-4 py-3 cursor-pointer overflow-hidden shadow-md hover:shadow-amber-500/30 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 border border-amber-400/30"
         >
           <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-xl" />
-          <div className="flex flex-col space-y-3">
-            <div className="p-2 bg-white/15 rounded-lg w-fit">
+          <div className="flex items-center space-x-3">
+            <div className="p-1.5 bg-white/15 rounded-lg flex-shrink-0">
               <LayoutGrid className="h-5 w-5 text-white" />
             </div>
             <div>
-              <p className="text-base font-semibold text-white">View All Cards</p>
-              <p className="text-xs text-amber-200 mt-0.5">
+              <p className="text-sm font-semibold text-white">View All Cards</p>
+              <p className="text-xs text-amber-200">
                 {totalAvailableCards > 0 ? `${totalAvailableCards} Cards available` : 'Browse all cards'}
               </p>
             </div>
@@ -177,8 +177,8 @@ const DashboardPage: React.FC = () => {
       </motion.div>
 
       {/* Main Content Grid - Natural content flow */}
-      <motion.div 
-        className={`grid gap-4 ${isChatExpanded ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-3'}`}
+      <motion.div
+        className={`grid gap-4 flex-1 min-h-0 overflow-hidden ${isChatExpanded ? 'grid-cols-1 grid-rows-1' : 'grid-cols-1 lg:grid-cols-3 lg:grid-rows-1'}`}
         layout
         transition={{ duration: 0.3, ease: "easeInOut" }}
         {...({} as any)}
@@ -188,10 +188,10 @@ const DashboardPage: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className={isChatExpanded ? 'col-span-1' : 'lg:col-span-2'}
+          className={isChatExpanded ? 'col-span-1 h-full' : 'lg:col-span-2 h-full'}
           {...({} as any)}
         >
-          <div className="relative">
+          <div className="relative h-full min-h-0">
             {/* Expand/Collapse Button */}
             <button
               onClick={() => setIsChatExpanded(!isChatExpanded)}
@@ -219,13 +219,13 @@ const DashboardPage: React.FC = () => {
 
         {/* Right Column - Hidden when chat is expanded */}
         {!isChatExpanded && (
-          <div className="space-y-4">
+          <div className="h-full flex flex-col gap-4 min-h-0">
           {/* Top Performing Cards - More compact */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700"
+            className="flex-none bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700"
             {...({} as any)}
           >
             <div className="flex items-center justify-between mb-4">
@@ -262,19 +262,13 @@ const DashboardPage: React.FC = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
-            className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700"
+            className="flex-1 min-h-0 flex flex-col bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700"
             {...({} as any)}
           >
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Top Discussions</h2>
-              <button 
-                onClick={() => navigate('/all-cards')}
-                className="text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300 text-sm font-medium"
-              >
-                View all
-              </button>
             </div>
-            <div className="space-y-3 max-h-80 overflow-y-auto">
+            <div className="space-y-3 flex-1 overflow-y-auto min-h-0">
               {topDiscussions.length > 0 ? (
                 topDiscussions.map((discussion, index) => (
                   <div 

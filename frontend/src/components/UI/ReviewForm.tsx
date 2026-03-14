@@ -31,15 +31,6 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, onCancel, initialData
     }
   }, [initialData]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (formData.overall_rating === 0) {
-      alert('Please provide a rating');
-      return;
-    }
-    onSubmit(formData);
-  };
-
   const handleInputChange = (field: string, value: string | number) => {
     setFormData(prev => ({
       ...prev,
@@ -70,44 +61,59 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, onCancel, initialData
     return stars;
   };
 
+  const [ratingError, setRatingError] = useState('');
+
+  const handleSubmitWithValidation = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (formData.overall_rating === 0) {
+      setRatingError('Please select a rating before submitting.');
+      return;
+    }
+    setRatingError('');
+    onSubmit(formData);
+  };
+
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-200 dark:border-gray-700">
       <div className="flex justify-between items-center mb-6">
-        <h3 className="text-xl font-semibold text-gray-900">
+        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
           {initialData ? 'Edit Your Review' : 'Write a Review'}
         </h3>
         <button
           onClick={onCancel}
-          className="text-gray-400 hover:text-gray-600"
+          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
         >
           <X className="w-5 h-5" />
         </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmitWithValidation} className="space-y-6">
         {/* Rating */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Overall Rating *
           </label>
           <div className="flex items-center space-x-1">
             {renderStars()}
-            <span className="ml-2 text-sm text-gray-500">
+            <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">
               {formData.overall_rating > 0 && `${formData.overall_rating}/5`}
             </span>
           </div>
+          {ratingError && (
+            <p className="mt-1 text-sm text-red-600 dark:text-red-400">{ratingError}</p>
+          )}
         </div>
 
         {/* Review Title */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Review Title
           </label>
           <input
             type="text"
             value={formData.review_title}
             onChange={(e) => handleInputChange('review_title', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
             placeholder="Brief summary of your experience"
             maxLength={200}
           />
@@ -115,56 +121,56 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, onCancel, initialData
 
         {/* Review Content */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Review Content
           </label>
           <textarea
             value={formData.review_content}
             onChange={(e) => handleInputChange('review_content', e.target.value)}
             rows={4}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
             placeholder="Share your detailed experience with this card..."
           />
         </div>
 
         {/* Pros */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Pros
           </label>
           <textarea
             value={formData.pros}
             onChange={(e) => handleInputChange('pros', e.target.value)}
             rows={3}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
             placeholder="What you liked about this card..."
           />
         </div>
 
         {/* Cons */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Cons
           </label>
           <textarea
             value={formData.cons}
             onChange={(e) => handleInputChange('cons', e.target.value)}
             rows={3}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
             placeholder="What you didn't like about this card..."
           />
         </div>
 
         {/* Experience */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Experience
           </label>
           <textarea
             value={formData.experience}
             onChange={(e) => handleInputChange('experience', e.target.value)}
             rows={3}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
             placeholder="Share your personal experience using this card..."
           />
         </div>
@@ -174,13 +180,13 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, onCancel, initialData
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
+            className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
           >
             Cancel
           </button>
           <button
             type="submit"
-            className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            className="px-6 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
           >
             {initialData ? 'Update Review' : 'Submit Review'}
           </button>

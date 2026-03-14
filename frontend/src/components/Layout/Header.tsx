@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { User, LogOut, Settings, ChevronDown, Shield } from 'lucide-react';
+import { LogOut, ChevronDown, Shield } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
 const Header: React.FC = () => {
@@ -58,7 +58,7 @@ const Header: React.FC = () => {
   }
 
   return (
-    <header className="sticky top-0 z-50 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+    <header className="sticky top-0 z-50 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-2">
       <div className="flex items-center justify-between">
         {/* Left side - Logo/Title */}
         <div className="flex items-center space-x-4">
@@ -113,29 +113,6 @@ const Header: React.FC = () => {
                   {user?.email}
                 </p>
               </div>
-
-              {/* Menu Items */}
-              <button
-                onClick={() => {
-                  setIsUserMenuOpen(false);
-                  navigate('/profile');
-                }}
-                className="w-full flex items-center space-x-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-              >
-                <User className="h-4 w-4" />
-                <span>Profile</span>
-              </button>
-
-              <button
-                onClick={() => {
-                  setIsUserMenuOpen(false);
-                  navigate('/settings');
-                }}
-                className="w-full flex items-center space-x-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-              >
-                <Settings className="h-4 w-4" />
-                <span>Settings</span>
-              </button>
 
               {/* Admin Dashboard Link */}
               {user?.email === 'ashokkalbhor@gmail.com' && (

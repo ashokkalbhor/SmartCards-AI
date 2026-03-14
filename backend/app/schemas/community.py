@@ -24,7 +24,8 @@ class PostResponse(PostBase):
     comment_count: int
     created_at: datetime
     updated_at: datetime
-    
+    user_vote: Optional[str] = None  # 'upvote', 'downvote', or None
+
     class Config:
         from_attributes = True
 

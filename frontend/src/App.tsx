@@ -21,11 +21,6 @@ import CardDetailPage from './pages/Cards/CardDetailPage';
 import EditCardPage from './pages/Cards/EditCardPage';
 import CardComparisonPage from './pages/Cards/CardComparisonPage';
 import AllCardsPage from './pages/Cards/AllCardsPage';
-import TransactionsPage from './pages/Transactions/TransactionsPage';
-import RewardsPage from './pages/Rewards/RewardsPage';
-import RecommendationsPage from './pages/Recommendations/RecommendationsPage';
-import ProfilePage from './pages/Profile/ProfilePage';
-import SettingsPage from './pages/Settings/SettingsPage';
 import CommunityPage from './pages/Community/CommunityPage';
 import PostDetailPage from './pages/Community/PostDetailPage';
 import AdminDashboardPage from './pages/Admin/AdminDashboardPage';
@@ -146,46 +141,6 @@ function AppContent() {
             <ProtectedRoute>
               <Layout>
                 <AllCardsPage />
-              </Layout>
-            </ProtectedRoute>
-          } />
-
-          <Route path="/transactions" element={
-            <ProtectedRoute>
-              <Layout>
-                <TransactionsPage />
-              </Layout>
-            </ProtectedRoute>
-          } />
-
-          <Route path="/rewards" element={
-            <ProtectedRoute>
-              <Layout>
-                <RewardsPage />
-              </Layout>
-            </ProtectedRoute>
-          } />
-
-          <Route path="/recommendations" element={
-            <ProtectedRoute>
-              <Layout>
-                <RecommendationsPage />
-              </Layout>
-            </ProtectedRoute>
-          } />
-
-          <Route path="/profile" element={
-            <ProtectedRoute>
-              <Layout>
-                <ProfilePage />
-              </Layout>
-            </ProtectedRoute>
-          } />
-
-          <Route path="/settings" element={
-            <ProtectedRoute>
-              <Layout>
-                <SettingsPage />
               </Layout>
             </ProtectedRoute>
           } />

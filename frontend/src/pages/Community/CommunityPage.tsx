@@ -18,6 +18,7 @@ interface Post {
   comment_count: number;
   created_at: string;
   updated_at: string;
+  user_vote?: string | null;
 }
 
 interface CardData {
@@ -64,16 +65,16 @@ const CommunityPage: React.FC = () => {
         limit: 10,
         sort_by: sortBy
       });
-      
+
       if (reset) {
         setPosts(response.posts);
         setCurrentPage(0);
       } else {
         setPosts(prev => [...prev, ...response.posts]);
       }
-      
+
       setTotalCount(response.total_count);
-      setHasMore(response.posts.length === 10);
+      setHasMore(skip + response.posts.length < response.total_count);
     } catch (error) {
       console.error('Error loading posts:', error);
     } finally {

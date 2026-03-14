@@ -2,11 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List, Optional
+from datetime import datetime
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.user import User
 from app.models.card_review import CardReview, ReviewVote
 from app.models.card_master_data import CardMasterData
+from app.models.credit_card import CreditCard
 from app.schemas.card_review import (
     CardReviewCreate, 
     CardReviewResponse, 
@@ -89,6 +91,12 @@ def create_card_review(
     if existing_review:
         raise HTTPException(status_code=400, detail="You have already reviewed this card")
     
+    # Check if reviewer actually owns this card
+    is_verified = db.query(CreditCard).filter(
+        CreditCard.user_id == current_user.id,
+        CreditCard.card_master_data_id == card_id
+    ).first() is not None
+
     # Create review
     review = CardReview(
         user_id=current_user.id,
@@ -98,7 +106,8 @@ def create_card_review(
         review_content=review_data.review_content,
         pros=review_data.pros,
         cons=review_data.cons,
-        experience=review_data.experience
+        experience=review_data.experience,
+        is_verified_cardholder=is_verified
     )
     
     db.add(review)
@@ -146,10 +155,11 @@ def update_card_review(
     review.pros = review_data.pros
     review.cons = review_data.cons
     review.experience = review_data.experience
-    
+    review.updated_at = datetime.utcnow()
+
     db.commit()
     db.refresh(review)
-    
+
     return CardReviewResponse(
         id=review.id,
         user_id=review.user_id,
@@ -164,7 +174,7 @@ def update_card_review(
         is_verified_cardholder=review.is_verified_cardholder,
         helpful_votes=review.helpful_votes,
         created_at=review.created_at,
-        updated_at=review.updated_at
+        updated_at=review.updated_at or review.created_at
     )
 
 @router.delete("/reviews/{review_id}")

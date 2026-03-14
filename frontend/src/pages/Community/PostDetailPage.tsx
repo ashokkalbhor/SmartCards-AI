@@ -34,6 +34,7 @@ interface Post {
   created_at: string;
   updated_at: string;
   comments: CommentData[];
+  user_vote?: string | null;
 }
 
 const PostDetailPage: React.FC = () => {
@@ -172,7 +173,7 @@ const PostDetailPage: React.FC = () => {
                 className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
               >
                 <ThumbsUp className={`w-4 h-4 ${
-                  post.net_votes > 0 ? 'text-green-500' : 'text-gray-400'
+                  post.user_vote === 'upvote' ? 'text-green-500' : 'text-gray-400'
                 }`} />
               </button>
               
@@ -186,7 +187,7 @@ const PostDetailPage: React.FC = () => {
                 className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
               >
                 <ThumbsDown className={`w-4 h-4 ${
-                  post.net_votes < 0 ? 'text-red-500' : 'text-gray-400'
+                  post.user_vote === 'downvote' ? 'text-red-500' : 'text-gray-400'
                 }`} />
               </button>
             </div>

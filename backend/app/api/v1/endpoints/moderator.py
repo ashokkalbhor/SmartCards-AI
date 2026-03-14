@@ -13,6 +13,7 @@ from app.models.card_master_data import CardMasterData, CardSpendingCategory, Ca
 from app.schemas.edit_suggestion import (
     EditSuggestionResponse, EditSuggestionUpdate, EditSuggestionStats
 )
+from app.core.allowed_names import validate_category_name, validate_merchant_name
 from datetime import datetime
 
 router = APIRouter()
@@ -41,7 +42,7 @@ def get_moderator_info(current_user: User = Depends(require_moderator)):
 @router.get("/edit-suggestions", response_model=List[EditSuggestionResponse])
 def get_pending_suggestions(
     status_filter: Optional[str] = Query("pending", regex="^(pending|approved|rejected)$"),
-    field_type: Optional[str] = Query(None, regex="^(spending_category|merchant_reward)$"),
+    field_type: Optional[str] = Query(None, regex="^(spending_category|spending_category_cap|merchant_reward|merchant_reward_cap|basic_info)$"),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     db: Session = Depends(get_db),
@@ -117,6 +118,12 @@ def review_suggestion(
                     # Update existing category
                     category.reward_rate = float(suggestion.new_value)
                 else:
+                    # Validate against whitelist before creating
+                    try:
+                        validated_name = validate_category_name(suggestion.field_name)
+                    except ValueError as e:
+                        raise HTTPException(status_code=400, detail=str(e))
+
                     # Create new category
                     from app.core.card_templates import get_default_spending_categories
                     default_categories = get_default_spending_categories(card.card_tier, card.bank_name)
@@ -130,7 +137,7 @@ def review_suggestion(
                     if default_category:
                         new_category = CardSpendingCategory(
                             card_master_id=suggestion.card_master_id,
-                            category_name=default_category["category_name"],
+                            category_name=validated_name,
                             category_display_name=default_category["category_display_name"],
                             reward_rate=float(suggestion.new_value),
                             reward_type=default_category["reward_type"],
@@ -145,8 +152,8 @@ def review_suggestion(
                         # Fallback: create with basic info
                         new_category = CardSpendingCategory(
                             card_master_id=suggestion.card_master_id,
-                            category_name=suggestion.field_name,
-                            category_display_name=suggestion.field_name.replace('_', ' ').title(),
+                            category_name=validated_name,
+                            category_display_name=validated_name.replace('_', ' ').title(),
                             reward_rate=float(suggestion.new_value),
                             reward_type="points",
                             is_active=True
@@ -182,6 +189,12 @@ def review_suggestion(
                     # Update existing merchant
                     merchant.reward_rate = float(suggestion.new_value)
                 else:
+                    # Validate against whitelist before creating
+                    try:
+                        validated_name = validate_merchant_name(suggestion.field_name)
+                    except ValueError as e:
+                        raise HTTPException(status_code=400, detail=str(e))
+
                     # Create new merchant
                     from app.core.card_templates import get_default_merchant_rewards
                     default_merchants = get_default_merchant_rewards(card.card_tier, card.bank_name)
@@ -195,7 +208,7 @@ def review_suggestion(
                     if default_merchant:
                         new_merchant = CardMerchantReward(
                             card_master_id=suggestion.card_master_id,
-                            merchant_name=default_merchant["merchant_name"],
+                            merchant_name=validated_name,
                             merchant_display_name=default_merchant["merchant_display_name"],
                             reward_rate=float(suggestion.new_value),
                             reward_type=default_merchant["reward_type"],
@@ -210,8 +223,8 @@ def review_suggestion(
                         # Fallback: create with basic info
                         new_merchant = CardMerchantReward(
                             card_master_id=suggestion.card_master_id,
-                            merchant_name=suggestion.field_name,
-                            merchant_display_name=suggestion.field_name.replace('_', ' ').title(),
+                            merchant_name=validated_name,
+                            merchant_display_name=validated_name.replace('_', ' ').title(),
                             reward_rate=float(suggestion.new_value),
                             reward_type="points",
                             is_active=True

@@ -170,6 +170,28 @@ async def get_current_verified_user(
     return current_user
 
 
+security_optional = HTTPBearer(auto_error=False)
+
+
+def get_optional_current_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_optional),
+    db: Session = Depends(get_db)
+) -> Optional[User]:
+    """Get current user if authenticated, otherwise return None (no error)."""
+    if credentials is None:
+        return None
+    try:
+        user_id = verify_token(credentials.credentials)
+        if user_id is None:
+            return None
+    except JWTError:
+        return None
+    user = db.query(User).filter(User.id == int(user_id)).first()
+    if user is None or not user.is_active:
+        return None
+    return user
+
+
 def generate_password_reset_token(email: str) -> str:
     """Generate password reset token"""
     delta = timedelta(hours=settings.ACCESS_TOKEN_EXPIRE_MINUTES)

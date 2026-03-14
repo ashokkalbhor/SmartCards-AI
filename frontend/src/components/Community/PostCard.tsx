@@ -17,6 +17,7 @@ interface Post {
   comment_count: number;
   created_at: string;
   updated_at: string;
+  user_vote?: string | null;
 }
 
 interface PostCardProps {
@@ -58,7 +59,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onVoteChange }) => {
             className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
           >
             <ThumbsUp className={`w-4 h-4 ${
-              post.net_votes > 0 ? 'text-green-500' : 'text-gray-400'
+              post.user_vote === 'upvote' ? 'text-green-500' : 'text-gray-400'
             }`} />
           </button>
           
@@ -72,7 +73,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onVoteChange }) => {
             className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
           >
             <ThumbsDown className={`w-4 h-4 ${
-              post.net_votes < 0 ? 'text-red-500' : 'text-gray-400'
+              post.user_vote === 'downvote' ? 'text-red-500' : 'text-gray-400'
             }`} />
           </button>
         </div>
