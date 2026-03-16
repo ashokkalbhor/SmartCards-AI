@@ -39,12 +39,12 @@ def get_card_master_data(
     limit: int = Query(100, ge=1, le=1000),  # Increased limit to 1000
     bank_name: Optional[str] = Query(None),
     card_tier: Optional[str] = Query(None),
-    is_active: bool = Query(True),
+    is_active: Optional[bool] = Query(None),
     db: Session = Depends(get_db)
 ):
     """Get all card master data with optional filters"""
     query = db.query(CardMasterData)
-    
+
     if bank_name:
         query = query.filter(CardMasterData.bank_name.ilike(f"%{bank_name}%"))
     if card_tier:

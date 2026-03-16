@@ -63,6 +63,7 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: Optional[str] = None
     OPENAI_MODEL: str = "gpt-4o"
     OPENAI_BROWSE_MODEL: str = "gpt-4o"
+    OPENAI_VERIFY_MODEL: str = "gpt-4.1-mini"
 
     # Search API Keys (for multi-provider search)
     TAVILY_API_KEY: Optional[str] = None

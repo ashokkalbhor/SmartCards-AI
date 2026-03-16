@@ -29,6 +29,7 @@ const CardComparisonPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showUserCards, setShowUserCards] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
 
@@ -152,11 +153,7 @@ const CardComparisonPage: React.FC = () => {
 
     try {
       // Show loading state
-      const exportButton = document.querySelector('[data-export-button]') as HTMLButtonElement;
-      if (exportButton) {
-        exportButton.innerHTML = '<Loader2 className="w-4 h-4 animate-spin" /> Generating...';
-        exportButton.disabled = true;
-      }
+      setIsExporting(true);
 
 
 
@@ -214,7 +211,18 @@ const CardComparisonPage: React.FC = () => {
       
       // Clone the table content
       const tableClone = exportRef.current.cloneNode(true) as HTMLElement;
-      
+
+      // Strip outer container styling (border, shadow, rounded corners, padding cause extra space/blue outline)
+      tableClone.style.border = 'none';
+      tableClone.style.borderRadius = '0';
+      tableClone.style.boxShadow = 'none';
+      tableClone.style.padding = '0';
+      tableClone.style.margin = '0';
+      tableClone.style.background = 'white';
+
+      // Remove hidden print-only branding elements from clone (they add blank space)
+      tableClone.querySelectorAll('.hidden').forEach(el => (el as HTMLElement).style.display = 'none');
+
       // Trim card names for image export (remove common words)
       const trimCardName = (cardName: string) => {
         return cardName
@@ -441,7 +449,26 @@ const CardComparisonPage: React.FC = () => {
         <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">Your personalized comparison report</div>
       `;
       
+      // Center section - QR code + URL
+      const qrSection = document.createElement('div');
+      qrSection.style.cssText = `
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 12px;
+      `;
+      const siteUrl = 'https://smartcards-ai-frontend.onrender.com';
+      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(siteUrl)}&color=0284c7&bgcolor=ffffff`;
+      qrSection.innerHTML = `
+        <img src="${qrUrl}" width="80" height="80" style="border: 2px solid #e5e7eb; border-radius: 8px; display: block; flex-shrink: 0;" crossorigin="anonymous" />
+        <div style="display: flex; flex-direction: column; gap: 5px;">
+          <div style="font-size: 16px; font-weight: 800; color: #0284c7; letter-spacing: 0.2px;">Scan to compare your cards</div>
+          <div style="font-size: 14px; color: #2563eb; font-weight: 700; text-decoration: underline;">smartcards-ai-frontend.onrender.com</div>
+        </div>
+      `;
+
       brandingHeader.appendChild(brandSection);
+      brandingHeader.appendChild(qrSection);
       brandingHeader.appendChild(userSection);
       
 
@@ -456,13 +483,12 @@ const CardComparisonPage: React.FC = () => {
         font-family: 'Inter', system-ui, sans-serif;
       `;
       brandingFooter.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-          <div style="font-size: 12px; color: #6b7280;">© 2025 UNGI SmartCards AI. Every swipe, Optimized.</div>
-          <div style="font-size: 11px; color: #9ca3af;">
-            For personalized credit card recommendations and detailed capping information, visit: 
-            <span style="color: #2563eb; font-weight: bold; text-decoration: underline; margin-left: 4px;">
-              https://smartcards-ai-frontend.onrender.com/
-            </span>
+        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; border-top: 1px solid #e5e7eb; padding-top: 8px;">
+          <div style="font-size: 15px; color: #6b7280;">© 2025 UNGI SmartCards AI. Every swipe, Optimized.</div>
+          <div style="font-size: 15px; color: #374151; font-weight: 500; text-align: right;">
+            ⚠️ Card data is curated by GenAI models and may contain inaccuracies. Found an error? Report it at
+            <span style="color: #2563eb; font-weight: 700; text-decoration: underline;">smartcards-ai-frontend.onrender.com</span>
+            or email <span style="color: #2563eb; font-weight: 700;">ashokkalbhor@gmail.com</span>
           </div>
         </div>
       `;
@@ -504,12 +530,7 @@ const CardComparisonPage: React.FC = () => {
       console.error('Export failed:', error);
       alert('Failed to generate image. Please try again.');
     } finally {
-      // Restore button state
-      const exportButton = document.querySelector('[data-export-button]') as HTMLButtonElement;
-      if (exportButton) {
-        exportButton.innerHTML = '<Download className="w-4 h-4" /><span className="hidden sm:inline">Download Image</span><span className="sm:hidden">Download</span>';
-        exportButton.disabled = false;
-      }
+      setIsExporting(false);
     }
   };
 
@@ -620,12 +641,21 @@ const CardComparisonPage: React.FC = () => {
             {/* Export Button */}
             <button
               onClick={handleExport}
-              className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm whitespace-nowrap"
+              disabled={isExporting}
+              className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-medium whitespace-nowrap shadow-sm"
               data-export-button
             >
-              <Download className="w-4 h-4" />
-              <span className="hidden sm:inline">Download Image</span>
-              <span className="sm:hidden">Download</span>
+              {isExporting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Generating…</span>
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4" />
+                  <span>Export Image</span>
+                </>
+              )}
             </button>
           </div>
         </div>

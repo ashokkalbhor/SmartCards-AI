@@ -26,9 +26,16 @@ class CardUpdateService:
 
     def compare_and_create_suggestions(self, db: Session, card_id: int,
                                       extracted_data: Dict[str, Any],
-                                      system_user_id: int) -> List[EditSuggestion]:
-        """Compare extracted data with current DB and create edit suggestions for changes"""
+                                      system_user_id: int,
+                                      verification_flags: Optional[Dict[str, Any]] = None) -> List[EditSuggestion]:
+        """Compare extracted data with current DB and create edit suggestions for changes.
+
+        verification_flags format (from verify_card_data):
+          { "<field_type>:<field_name>": { "extracted_value", "verified_value", "flagged", "reason" } }
+        Flagged suggestions get status='needs_review' with verifier details in additional_data.
+        """
         suggestions = []
+        verification_flags = verification_flags or {}
 
         # Get current card data
         card = db.query(CardMasterData).filter(CardMasterData.id == card_id).first()
@@ -36,15 +43,28 @@ class CardUpdateService:
             logger.error(f"Card {card_id} not found")
             return suggestions
 
-        # Fetch existing pending suggestions to avoid duplicates
+        # Fetch existing pending/needs_review suggestions to avoid duplicates
         existing_pending = db.query(EditSuggestion).filter(
             EditSuggestion.card_master_id == card_id,
-            EditSuggestion.status == "pending"
+            EditSuggestion.status.in_(["pending", "needs_review"])
         ).all()
         pending_keys = {(s.field_type, s.field_name) for s in existing_pending}
 
         def _is_duplicate(field_type: str, field_name: str) -> bool:
             return (field_type, field_name) in pending_keys
+
+        def _suggestion_status(field_type: str, field_name: str, base_additional: Dict) -> tuple:
+            """Return (status, additional_data) — needs_review when verifier flagged this field."""
+            flag_key = f"{field_type}:{field_name}"
+            flag = verification_flags.get(flag_key, {})
+            if flag.get("flagged"):
+                additional = {**base_additional, "verifier": {
+                    "verified_value": flag.get("verified_value"),
+                    "reason": flag.get("reason", ""),
+                    "model": "gpt-4.1-mini",
+                }}
+                return "needs_review", additional
+            return "pending", base_additional
 
         # Compare card-level fields
         card_field_mapping = {
@@ -92,6 +112,11 @@ class CardUpdateService:
             
             # Compare values
             if old_value != new_value and new_value is not None and not _is_duplicate("card_field", db_field):
+                base_additional = {
+                    "source_url": (extracted_data.get("source_urls") or [None])[0],
+                    "extraction_date": datetime.utcnow().isoformat()
+                }
+                status, additional = _suggestion_status("card_field", db_field, base_additional)
                 suggestion = EditSuggestion(
                     user_id=system_user_id,
                     card_master_id=card_id,
@@ -99,15 +124,12 @@ class CardUpdateService:
                     field_name=db_field,
                     old_value=str(old_value) if old_value is not None else None,
                     new_value=str(new_value),
-                    status="pending",
-                    suggestion_reason=f"Automated update from official source",
-                    additional_data={
-                        "source_url": (extracted_data.get("source_urls") or [None])[0],
-                        "extraction_date": datetime.utcnow().isoformat()
-                    }
+                    status=status,
+                    suggestion_reason="Automated update from official source",
+                    additional_data=additional,
                 )
                 suggestions.append(suggestion)
-                logger.info(f"Created suggestion for {db_field}: {old_value} -> {new_value}")
+                logger.info(f"Created suggestion ({status}) for {db_field}: {old_value} -> {new_value}")
         
         # Compare spending categories
         current_categories = {cat.category_name: cat for cat in card.spending_categories}
@@ -128,6 +150,12 @@ class CardUpdateService:
             if cat_name in current_categories:
                 old_cat = current_categories[cat_name]
                 if old_cat.reward_rate != new_cat.get("reward_rate") and not _is_duplicate("spending_category", cat_name):
+                    base_additional = {
+                        "source_url": (extracted_data.get("source_urls") or [None])[0],
+                        "extraction_date": datetime.utcnow().isoformat(),
+                        "category_data": new_cat,
+                    }
+                    status, additional = _suggestion_status("spending_category", cat_name, base_additional)
                     suggestion = EditSuggestion(
                         user_id=system_user_id,
                         card_master_id=card_id,
@@ -135,17 +163,18 @@ class CardUpdateService:
                         field_name=cat_name,
                         old_value=str(old_cat.reward_rate),
                         new_value=str(new_cat.get("reward_rate")),
-                        status="pending",
-                        suggestion_reason=f"Automated update: reward rate changed",
-                        additional_data={
-                            "source_url": (extracted_data.get("source_urls") or [None])[0],
-                            "extraction_date": datetime.utcnow().isoformat(),
-                            "category_data": new_cat
-                        }
+                        status=status,
+                        suggestion_reason="Automated update: reward rate changed",
+                        additional_data=additional,
                     )
                     suggestions.append(suggestion)
             elif not _is_duplicate("spending_category", cat_name):
                 # New category
+                base_additional = {
+                    "source_url": (extracted_data.get("source_urls") or [None])[0],
+                    "extraction_date": datetime.utcnow().isoformat(),
+                }
+                status, additional = _suggestion_status("spending_category", cat_name, base_additional)
                 suggestion = EditSuggestion(
                     user_id=system_user_id,
                     card_master_id=card_id,
@@ -153,12 +182,9 @@ class CardUpdateService:
                     field_name=cat_name,
                     old_value=None,
                     new_value=json.dumps(new_cat),
-                    status="pending",
-                    suggestion_reason=f"Automated update: new category added",
-                    additional_data={
-                        "source_url": (extracted_data.get("source_urls") or [None])[0],
-                        "extraction_date": datetime.utcnow().isoformat()
-                    }
+                    status=status,
+                    suggestion_reason="Automated update: new category added",
+                    additional_data=additional,
                 )
                 suggestions.append(suggestion)
         
@@ -179,6 +205,12 @@ class CardUpdateService:
             if merch_name in current_merchants:
                 old_merch = current_merchants[merch_name]
                 if old_merch.reward_rate != new_merch.get("reward_rate") and not _is_duplicate("merchant_reward", merch_name):
+                    base_additional = {
+                        "source_url": (extracted_data.get("source_urls") or [None])[0],
+                        "extraction_date": datetime.utcnow().isoformat(),
+                        "merchant_data": new_merch,
+                    }
+                    status, additional = _suggestion_status("merchant_reward", merch_name, base_additional)
                     suggestion = EditSuggestion(
                         user_id=system_user_id,
                         card_master_id=card_id,
@@ -186,17 +218,18 @@ class CardUpdateService:
                         field_name=merch_name,
                         old_value=str(old_merch.reward_rate),
                         new_value=str(new_merch.get("reward_rate")),
-                        status="pending",
-                        suggestion_reason=f"Automated update: reward rate changed",
-                        additional_data={
-                            "source_url": (extracted_data.get("source_urls") or [None])[0],
-                            "extraction_date": datetime.utcnow().isoformat(),
-                            "merchant_data": new_merch
-                        }
+                        status=status,
+                        suggestion_reason="Automated update: reward rate changed",
+                        additional_data=additional,
                     )
                     suggestions.append(suggestion)
             elif not _is_duplicate("merchant_reward", merch_name):
                 # New merchant
+                base_additional = {
+                    "source_url": (extracted_data.get("source_urls") or [None])[0],
+                    "extraction_date": datetime.utcnow().isoformat(),
+                }
+                status, additional = _suggestion_status("merchant_reward", merch_name, base_additional)
                 suggestion = EditSuggestion(
                     user_id=system_user_id,
                     card_master_id=card_id,
@@ -204,12 +237,9 @@ class CardUpdateService:
                     field_name=merch_name,
                     old_value=None,
                     new_value=json.dumps(new_merch),
-                    status="pending",
-                    suggestion_reason=f"Automated update: new merchant added",
-                    additional_data={
-                        "source_url": (extracted_data.get("source_urls") or [None])[0],
-                        "extraction_date": datetime.utcnow().isoformat()
-                    }
+                    status=status,
+                    suggestion_reason="Automated update: new merchant added",
+                    additional_data=additional,
                 )
                 suggestions.append(suggestion)
         

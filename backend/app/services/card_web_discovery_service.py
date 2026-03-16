@@ -256,3 +256,99 @@ class CardWebDiscoveryService:
             logger.error(f"Deep research failed: {exc}")
             return f"Research failed: {str(exc)}"
 
+    async def verify_card_data(
+        self, *, bank_name: str, card_name: str, extracted_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Independently verify extracted card data using the configured verify model (gpt-4.1-mini)
+        with web search. Returns a dict of verification flags keyed by
+        "<field_type>:<field_name>" with structure:
+          { "extracted_value": ..., "verified_value": ..., "flagged": bool, "reason": str }
+        """
+        verify_model = settings.OPENAI_VERIFY_MODEL or "gpt-4.1-mini"
+        # gpt-4.1 family uses 'web_search'; gpt-4o family uses 'web_search_preview'
+        web_tool = (
+            {"type": "web_search"}
+            if any(x in verify_model for x in ("4.1", "4-1"))
+            else {"type": "web_search_preview"}
+        )
+
+        # Build a compact summary of what was extracted so verifier can check each value
+        lines = [f"Card: {bank_name} {card_name}", ""]
+        fees = extracted_data.get("fees", {})
+        if fees:
+            lines.append("Fees:")
+            for k, v in fees.items():
+                if v is not None:
+                    lines.append(f"  {k}: {v}")
+        lounge = extracted_data.get("lounge_benefits", {})
+        if lounge:
+            lines.append("Lounge:")
+            for k, v in lounge.items():
+                if v is not None:
+                    lines.append(f"  {k}: {v}")
+        for cat in extracted_data.get("spending_categories", []):
+            lines.append(f"spending_category:{cat['category_name']} = {cat.get('reward_rate')}%")
+        for merch in extracted_data.get("merchant_rewards", []):
+            lines.append(f"merchant_reward:{merch['merchant_name']} = {merch.get('reward_rate')}%")
+
+        extracted_summary = "\n".join(lines)
+
+        system_prompt = (
+            "You are an independent credit card data verifier for the Indian market. "
+            "Search the web to verify the accuracy of extracted card data. "
+            "Use official bank pages and trusted sources (Technofino, CardExpert, BankBazaar). "
+            "For reward rates on points-based cards, always convert to effective cashback %: "
+            "effective_% = (points_per_100_spend × rupee_value_per_point). "
+            "Never report raw multipliers as percentages. "
+            "Return ONLY a JSON object — no markdown, no explanation outside JSON."
+        )
+
+        user_prompt = (
+            f"Verify the following extracted data for the '{bank_name} {card_name}' credit card "
+            f"by searching the web:\n\n{extracted_summary}\n\n"
+            "For EACH item listed, search and confirm whether the value is correct.\n"
+            "Return JSON in this exact format:\n"
+            "{\n"
+            '  "verified_fields": {\n'
+            '    "<field_key>": {\n'
+            '      "extracted_value": <number or string>,\n'
+            '      "verified_value": <your finding>,\n'
+            '      "flagged": true or false,\n'
+            '      "reason": "<brief explanation>"\n'
+            "    }\n"
+            "  }\n"
+            "}\n\n"
+            "Field key format: 'spending_category:<name>', 'merchant_reward:<name>', 'fees:<field>'\n"
+            "Set flagged=true only when you have high confidence the extracted value is WRONG."
+        )
+
+        payload = {
+            "model": verify_model,
+            "input": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            "tools": [web_tool],
+        }
+
+        try:
+            response_json = await self._request(payload)
+            content = self._extract_text_from_response(response_json)
+            # Strip markdown fences if present
+            content = content.strip()
+            if content.startswith("```"):
+                content = content.split("```")[1]
+                if content.startswith("json"):
+                    content = content[4:]
+            result = json.loads(content)
+            flags = result.get("verified_fields", {})
+            logger.info(
+                f"Verification complete for {bank_name} {card_name}: "
+                f"{sum(1 for v in flags.values() if v.get('flagged'))} field(s) flagged"
+            )
+            return flags
+        except Exception as exc:
+            logger.error(f"Verification failed for {bank_name} {card_name}: {exc}")
+            return {}  # Fail open — pipeline continues with pending status
+

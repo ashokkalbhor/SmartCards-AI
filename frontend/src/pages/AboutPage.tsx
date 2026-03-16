@@ -83,7 +83,7 @@ const AboutPage: React.FC = () => {
                   Ashok Kumar Kalbhor
                 </h3>
                 <p className="text-lg text-primary-600 dark:text-primary-400 mb-4">
-                  Senior Consultant | Enterprise Architect
+                  Enterprise Architect
                 </p>
                 <p className="text-gray-600 dark:text-gray-300 mb-4">
                   Gen AI • RPA • Full Stack • Data Engineering

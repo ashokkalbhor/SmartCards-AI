@@ -20,6 +20,7 @@ const CardsPage: React.FC = () => {
   const navigate = useNavigate();
   const [cards, setCards] = useState<Card[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cardToDelete, setCardToDelete] = useState<Card | null>(null);
   
   useEffect(() => {
     const fetchCards = async () => {
@@ -69,17 +70,20 @@ const CardsPage: React.FC = () => {
     navigate(`/card/${cardId}`);
   };
 
-  const handleDeleteCard = async (cardId: number) => {
-    if (window.confirm('Are you sure you want to delete this card?')) {
-      try {
-        await creditCardsAPI.deleteCard(cardId.toString());
-        // Refresh the cards list after deletion
-        const updatedCards = cards.filter(card => card.id !== cardId);
-        setCards(updatedCards);
-      } catch (error) {
-        console.error('Error deleting card:', error);
-        alert('Failed to delete card. Please try again.');
-      }
+  const handleDeleteCard = (cardId: number) => {
+    const card = cards.find(c => c.id === cardId) || null;
+    setCardToDelete(card);
+  };
+
+  const confirmDeleteCard = async () => {
+    if (!cardToDelete) return;
+    try {
+      await creditCardsAPI.deleteCard(cardToDelete.id.toString());
+      setCards(prev => prev.filter(c => c.id !== cardToDelete.id));
+    } catch (error) {
+      console.error('Error deleting card:', error);
+    } finally {
+      setCardToDelete(null);
     }
   };
 
@@ -93,6 +97,31 @@ const CardsPage: React.FC = () => {
 
   return (
     <div className="p-6 space-y-6">
+      {/* Delete confirmation modal */}
+      {cardToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 p-6 w-full max-w-sm mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Remove card?</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+              "<span className="font-medium text-gray-700 dark:text-gray-300">{cardToDelete.card_name}</span>" will be removed from your portfolio.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setCardToDelete(null)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteCard}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">My Cards</h1>
         <div className="flex items-center space-x-3">

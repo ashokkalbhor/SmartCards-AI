@@ -30,9 +30,16 @@ def create_credit_card(
         **card_data.dict()
     )
     db.add(db_card)
+
+    # Ensure the master card is active when added to any portfolio
+    if db_card.card_master_data_id:
+        master = db.query(CardMasterData).filter(CardMasterData.id == db_card.card_master_data_id).first()
+        if master and not master.is_active:
+            master.is_active = True
+
     db.commit()
     db.refresh(db_card)
-    
+
     return db_card
 
 

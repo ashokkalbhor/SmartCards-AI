@@ -21,6 +21,7 @@ interface CardData {
   joining_fee?: number;
   annual_fee?: number;
   is_lifetime_free: boolean;
+  is_active: boolean;
   joining_fee_display: string;
   annual_fee_display: string;
   annual_fee_waiver_spend?: number | null;
@@ -300,6 +301,25 @@ const CardDetailPage: React.FC = () => {
           <p className="text-gray-600 dark:text-gray-300">{cardData.description}</p>
         </div>
 
+        {/* Outdated data banner */}
+        {!cardData.is_active && (
+          <div className="flex items-start gap-3 mb-6 px-4 py-3 rounded-lg border border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/20 text-sm text-amber-800 dark:text-amber-300">
+            <span className="text-base leading-none mt-0.5">⚠️</span>
+            <span>
+              The data for this card may be outdated. It is not currently in our actively maintained list.
+              You can help keep it accurate by using the edit icons next to each field below to suggest corrections,
+              or{' '}
+              <a
+                href={`mailto:ashokkalbhor@gmail.com?subject=Data Refresh Request: ${encodeURIComponent(cardData.display_name)}&body=Please refresh the data for card: ${encodeURIComponent(cardData.display_name)} (ID: ${cardData.id})`}
+                className="underline font-medium hover:opacity-80"
+              >
+                email us
+              </a>
+              {' '}to request a data refresh for this card.
+            </span>
+          </div>
+        )}
+
         {/* Main Content - Five Sections */}
         <div className="space-y-6">
           {/* Section 1: Card Details Table */}
@@ -346,6 +366,16 @@ const CardDetailPage: React.FC = () => {
                         className="font-medium text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 transition-colors cursor-pointer flex items-center group/button"
                       >
                         {cardData.annual_fee_display}
+                        <Edit3 className="w-3 h-3 ml-1 opacity-0 group-hover/button:opacity-100" />
+                      </button>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 dark:text-gray-400">Fee Waiver Spend:</span>
+                      <button
+                        onClick={() => handleEditSuggestion('basic_info', 'annual_fee_waiver_spend', cardData.annual_fee_waiver_spend != null ? `₹${cardData.annual_fee_waiver_spend.toLocaleString('en-IN')}` : 'Not Set')}
+                        className="font-medium text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 transition-colors cursor-pointer flex items-center group/button"
+                      >
+                        {cardData.annual_fee_waiver_spend != null ? `₹${cardData.annual_fee_waiver_spend.toLocaleString('en-IN')}` : <span className="text-gray-400 dark:text-gray-500">Not Set</span>}
                         <Edit3 className="w-3 h-3 ml-1 opacity-0 group-hover/button:opacity-100" />
                       </button>
                     </div>

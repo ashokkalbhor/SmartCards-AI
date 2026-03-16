@@ -412,6 +412,7 @@ export const adminAPI = {
   reviewEditSuggestion: async (suggestionId: number, reviewData: {
     status: string;
     review_notes?: string;
+    use_verified_value?: boolean;
   }) => {
     const response = await api.put(`/admin/edit-suggestions/${suggestionId}`, reviewData);
     return response.data;

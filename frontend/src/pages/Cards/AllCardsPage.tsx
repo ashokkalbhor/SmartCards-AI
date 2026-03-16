@@ -51,13 +51,11 @@ const AllCardsPage: React.FC = () => {
   const loadCards = async () => {
     try {
       setLoading(true);
-      const response = await cardMasterDataAPI.getCards();
-      const activeCards = Array.isArray(response)
-        ? response.filter((c: CardData) => c.is_active)
-        : response.cards?.filter((c: CardData) => c.is_active) || [];
-      setCards(activeCards);
-      setFilteredCards(activeCards);
-      setBanks(Array.from(new Set(activeCards.map((c: CardData) => c.bank_name))).sort() as string[]);
+      const response = await cardMasterDataAPI.getCards(undefined, undefined, undefined);
+      const allCards = Array.isArray(response) ? response : response.cards || [];
+      setCards(allCards);
+      setFilteredCards(allCards);
+      setBanks(Array.from(new Set(allCards.map((c: CardData) => c.bank_name))).sort() as string[]);
     } catch (error) {
       console.error('Error loading cards:', error);
     } finally {
@@ -184,7 +182,7 @@ const AllCardsPage: React.FC = () => {
                   {...({} as any)}
                 >
                   {/* Card top accent bar */}
-                  <div className="h-1 bg-gradient-to-r from-primary-500 to-primary-400" />
+                  <div className={`h-1 bg-gradient-to-r ${card.is_active ? 'from-primary-500 to-primary-400' : 'from-amber-400 to-amber-300'}`} />
 
                   <div className="p-5">
                     {/* Bank + Network */}
@@ -192,9 +190,16 @@ const AllCardsPage: React.FC = () => {
                       <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                         {card.bank_name}
                       </span>
-                      <span className={`text-xs font-bold text-white px-2 py-0.5 rounded-full ${networkColor}`}>
-                        {card.card_network}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        {!card.is_active && (
+                          <span className="text-xs font-semibold text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 rounded-full">
+                            Outdated Data
+                          </span>
+                        )}
+                        <span className={`text-xs font-bold text-white px-2 py-0.5 rounded-full ${networkColor}`}>
+                          {card.card_network}
+                        </span>
+                      </div>
                     </div>
 
                     {/* Card Name */}

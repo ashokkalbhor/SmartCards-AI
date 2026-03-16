@@ -18,9 +18,10 @@ class EditSuggestionCreate(EditSuggestionBase):
 
 
 class EditSuggestionUpdate(BaseModel):
-    status: str  # pending, approved, rejected
+    status: str  # pending, approved, rejected, needs_review
     reviewed_by: Optional[int] = None
     review_notes: Optional[str] = None
+    use_verified_value: Optional[bool] = False  # when True, write verifier's value instead of extractor's
 
 
 class EditSuggestionResponse(EditSuggestionBase):

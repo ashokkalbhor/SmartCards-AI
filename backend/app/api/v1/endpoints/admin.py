@@ -1,7 +1,7 @@
 from typing import List, Optional, Any
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import func, desc
+from sqlalchemy import func, desc, case
 import json
 
 from app.core.database import get_db
@@ -184,7 +184,7 @@ def review_moderator_request(
 
 @router.get("/edit-suggestions", response_model=List[EditSuggestionResponse])
 def get_edit_suggestions(
-    status_filter: Optional[str] = Query(None, regex="^(pending|approved|rejected)$"),
+    status_filter: Optional[str] = Query(None, regex="^(pending|approved|rejected|needs_review)$"),
     field_type: Optional[str] = Query(None, regex="^(spending_category|spending_category_cap|merchant_reward|merchant_reward_cap|basic_info)$"),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
@@ -200,7 +200,13 @@ def get_edit_suggestions(
     if field_type:
         query = query.filter(EditSuggestion.field_type == field_type)
     
-    suggestions = query.order_by(desc(EditSuggestion.created_at)).offset(skip).limit(limit).all()
+    # Surface actionable suggestions (pending / needs_review) first, then newest first within each group
+    status_priority = case(
+        (EditSuggestion.status == "needs_review", 0),
+        (EditSuggestion.status == "pending", 1),
+        else_=2,
+    )
+    suggestions = query.order_by(status_priority, desc(EditSuggestion.created_at)).offset(skip).limit(limit).all()
     
     # Add user and card information
     result = []
@@ -230,7 +236,7 @@ def review_edit_suggestion(
     if not suggestion:
         raise HTTPException(status_code=404, detail="Edit suggestion not found")
     
-    if suggestion.status != "pending":
+    if suggestion.status not in ("pending", "needs_review"):
         raise HTTPException(status_code=400, detail="Suggestion has already been reviewed")
     
     # Update suggestion
@@ -241,6 +247,44 @@ def review_edit_suggestion(
     
     # If approved, apply the change to the card data
     if review_data.status == "approved":
+        # Resolve override rate: use verifier's value when admin chose "Keep Verified"
+        override_rate = None
+        if review_data.use_verified_value:
+            verifier_data = (suggestion.additional_data or {}).get("verifier", {})
+            raw_verified = verifier_data.get("verified_value")
+            if raw_verified is None:
+                raise HTTPException(status_code=400, detail="No verified value found for this suggestion")
+            # Verifier may return "2.0%", "5%", or a plain number — strip % before parsing
+            cleaned_verified = str(raw_verified).strip().rstrip('%').strip()
+            try:
+                override_rate = float(cleaned_verified)
+            except (ValueError, TypeError):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"AI Verifier's value '{raw_verified}' is descriptive, not a number. Use 'Keep Extracted' or 'Override' instead."
+                )
+
+        def _safe_float_rate(val: Any, field_label: str) -> float:
+            """Convert val to float; raise 400 if None/null/invalid/negative."""
+            if val is None or str(val).strip().lower() in ("none", "null", ""):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Cannot approve '{field_label}': no valid rate value found. Reject this suggestion instead."
+                )
+            try:
+                result = float(val)
+            except (ValueError, TypeError):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Cannot approve '{field_label}': value '{val}' is not a valid number."
+                )
+            if result < 0:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Cannot approve '{field_label}': reward rate cannot be negative ({result}%). Reject this suggestion instead."
+                )
+            return result
+
         # Apply the change to the card data
         card = db.query(CardMasterData).filter(CardMasterData.id == suggestion.card_master_id).first()
         if card:
@@ -266,7 +310,19 @@ def review_edit_suggestion(
                         return parsed_value[field]
                     return default
 
-                reward_rate = _resolve("reward_rate", suggestion.new_value)
+                reward_rate = override_rate if override_rate is not None else _resolve("reward_rate", None)
+                # If reward_rate is missing, compute from points data (points_per_100 × rupee_value_per_point)
+                if reward_rate is None:
+                    pts = _resolve("points_per_100")
+                    val = _resolve("rupee_value_per_point")
+                    if pts and val:
+                        try:
+                            reward_rate = round(float(pts) * float(val), 2) or None
+                        except (ValueError, TypeError):
+                            pass
+                # Final fallback: raw new_value (handles plain numeric strings)
+                if reward_rate is None:
+                    reward_rate = suggestion.new_value
                 reward_type = _resolve("reward_type", "points")
                 reward_cap = _resolve("reward_cap")
                 reward_cap_period = _resolve("reward_cap_period")
@@ -277,9 +333,11 @@ def review_edit_suggestion(
                     suggestion.field_name.replace('_', ' ').title()
                 )
 
+                safe_rate = _safe_float_rate(reward_rate, suggestion.field_name)
+
                 if category:
                     # Update existing category
-                    category.reward_rate = float(reward_rate)
+                    category.reward_rate = safe_rate
                     if reward_type:
                         category.reward_type = reward_type
                     if reward_cap is not None:
@@ -303,7 +361,7 @@ def review_edit_suggestion(
                         card_master_id=suggestion.card_master_id,
                         category_name=suggestion.field_name,
                         category_display_name=display_name,
-                        reward_rate=float(reward_rate),
+                        reward_rate=safe_rate,
                         reward_type=reward_type,
                         reward_cap=reward_cap,
                         reward_cap_period=reward_cap_period,
@@ -321,7 +379,8 @@ def review_edit_suggestion(
                 
                 if category:
                     # Only update the cap, leave reward_rate unchanged
-                    category.reward_cap = float(suggestion.new_value) if float(suggestion.new_value) > 0 else None
+                    cap_val = _safe_float_rate(suggestion.new_value, f"{suggestion.field_name} cap")
+                    category.reward_cap = cap_val if cap_val > 0 else None
                     category.reward_cap_period = "monthly"  # Default period
                 else:
                     # If category doesn't exist, don't create it just for cap editing
@@ -354,7 +413,19 @@ def review_edit_suggestion(
                     return default
 
                 # Extract values with fallbacks
-                reward_rate_val = _resolve_m("reward_rate", suggestion.new_value)
+                reward_rate_val = override_rate if override_rate is not None else _resolve_m("reward_rate", None)
+                # If reward_rate is missing, compute from points data
+                if reward_rate_val is None:
+                    pts_m = _resolve_m("points_per_100")
+                    val_m = _resolve_m("rupee_value_per_point")
+                    if pts_m and val_m:
+                        try:
+                            reward_rate_val = round(float(pts_m) * float(val_m), 2) or None
+                        except (ValueError, TypeError):
+                            pass
+                # Final fallback: raw new_value
+                if reward_rate_val is None:
+                    reward_rate_val = suggestion.new_value
                 reward_type_val = _resolve_m("reward_type")
                 reward_cap_val = _resolve_m("reward_cap")
                 reward_cap_period_val = _resolve_m("reward_cap_period")
@@ -362,9 +433,11 @@ def review_edit_suggestion(
                 conditions_val = _resolve_m("additional_conditions")
                 display_name_val = _resolve_m("merchant_display_name")
                 
+                safe_merch_rate = _safe_float_rate(reward_rate_val, suggestion.field_name)
+
                 if merchant:
                     # Update existing merchant
-                    merchant.reward_rate = float(reward_rate_val)
+                    merchant.reward_rate = safe_merch_rate
                     if reward_type_val: merchant.reward_type = reward_type_val
                     if reward_cap_val is not None: merchant.reward_cap = reward_cap_val
                     if reward_cap_period_val: merchant.reward_cap_period = reward_cap_period_val
@@ -379,24 +452,24 @@ def review_edit_suggestion(
                         raise HTTPException(status_code=400, detail=str(e))
                     # Try to get defaults first
                     from app.core.card_templates import get_default_merchant_rewards
-                    
+
                     # Safe access to card tier/bank
                     card_tier = getattr(card, 'card_tier', 'Standard')
                     bank_name = getattr(card, 'bank_name', 'Unknown')
-                    
+
                     default_merchants = get_default_merchant_rewards(card_tier, bank_name)
-                    
+
                     # Find the matching default merchant template
                     default_merchant = next(
                         (merch for merch in default_merchants if merch["merchant_name"] == suggestion.field_name),
                         {}
                     )
-                    
+
                     new_merchant = CardMerchantReward(
                         card_master_id=suggestion.card_master_id,
                         merchant_name=suggestion.field_name,
                         merchant_display_name=display_name_val or default_merchant.get("merchant_display_name") or suggestion.field_name.replace('_', ' ').title(),
-                        reward_rate=float(reward_rate_val),
+                        reward_rate=safe_merch_rate,
                         reward_type=reward_type_val or default_merchant.get("reward_type", "points"),
                         reward_cap=reward_cap_val if reward_cap_val is not None else default_merchant.get("reward_cap"),
                         reward_cap_period=reward_cap_period_val or default_merchant.get("reward_cap_period"),
@@ -414,7 +487,8 @@ def review_edit_suggestion(
                 
                 if merchant:
                     # Only update the cap, leave reward_rate unchanged
-                    merchant.reward_cap = float(suggestion.new_value) if float(suggestion.new_value) > 0 else None
+                    cap_val_m = _safe_float_rate(suggestion.new_value, f"{suggestion.field_name} cap")
+                    merchant.reward_cap = cap_val_m if cap_val_m > 0 else None
                     merchant.reward_cap_period = "monthly"  # Default period
                 else:
                     # If merchant doesn't exist, don't create it just for cap editing
@@ -461,7 +535,18 @@ def review_edit_suggestion(
                                 status_code=400,
                                 detail="Invalid annual fee format. Please use format like '₹500' or 'LTF'"
                             )
-    
+                elif suggestion.field_name == "annual_fee_waiver_spend":
+                    new_value = suggestion.new_value.strip()
+                    import re
+                    numeric_match = re.search(r'[\d,]+', new_value.replace(',', ''))
+                    if numeric_match:
+                        card.annual_fee_waiver_spend = float(numeric_match.group().replace(',', ''))
+                    else:
+                        raise HTTPException(
+                            status_code=400,
+                            detail="Invalid fee waiver spend format. Please use format like '₹2,00,000' or '200000'"
+                        )
+
     # Create audit log
     audit_log = AuditLog(
         user_id=current_user.id,
@@ -573,7 +658,7 @@ def get_admin_stats(db: Session = Depends(get_db), current_user: User = Depends(
     
     # Edit suggestion stats
     pending_suggestions = db.query(func.count(EditSuggestion.id)).filter(
-        EditSuggestion.status == "pending"
+        EditSuggestion.status.in_(["pending", "needs_review"])
     ).scalar()
     
     approved_suggestions = db.query(func.count(EditSuggestion.id)).filter(

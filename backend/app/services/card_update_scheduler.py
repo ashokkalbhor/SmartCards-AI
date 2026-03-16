@@ -52,9 +52,11 @@ class CardUpdateScheduler:
             initial_state = {
                 "card_name": card.card_name,
                 "bank_name": card.bank_name,
-                "official_url": card.terms_and_conditions_url or None, # Use DB URL as seed
+                "official_url": card.terms_and_conditions_url or None,
                 "scraped_content": None,
+                "research_summary": None,
                 "extracted_data": None,
+                "verification_flags": None,
                 "errors": [],
                 "messages": []
             }
@@ -88,6 +90,7 @@ class CardUpdateScheduler:
                 card.id,
                 extracted_data,
                 system_user_id,
+                verification_flags=result.get("verification_flags") or {},
             )
 
             # Save source URLs as approved link documents regardless of suggestions
@@ -103,10 +106,15 @@ class CardUpdateScheduler:
                     additional = suggestion.additional_data or {}
                     additional["official_source"] = official_url
                     suggestion.additional_data = additional
-                db.commit()
                 status = "suggestions_created"
             else:
                 status = "no_change"
+
+            # Stamp the card as processed so the sort order advances it to the back
+            # of the queue on the next run.  Only stamp on success — failed cards
+            # intentionally stay at the front so they are retried first.
+            card.updated_at = datetime.utcnow()
+            db.commit()
 
             self._mark_processed(
                 card=card,
@@ -128,49 +136,35 @@ class CardUpdateScheduler:
 
     async def run_monthly_update(self):
         """Run the monthly card update process sequentially with status tracking.
-        Now filters to portfolio cards only (cards with active holders)."""
+        Processes all active cards ordered by least-recently-updated first."""
         if self.is_running:
             logger.warning("Monthly update already running, skipping...")
             return
 
-        logger.info("Starting automated card update process (portfolio cards only)")
+        logger.info("Starting automated card update process (all active cards)")
         self.is_running = True
         self.last_error = None
         self._suggestions_created = 0
         self._cards_skipped = 0
         self._cards_failed = 0
 
-        # Agent does not need pre-check
-        # try:
-        #     self._get_discovery_service()
-        # except Exception as exc:
-        # ...
-        pass
-
         db = SessionLocal()
         try:
-            # Query cards that have at least one active holder (portfolio cards)
-            from sqlalchemy import func
-            
+            # Query all active cards — least recently updated first so stale cards
+            # are always prioritised; cards never updated (NULL) come first.
             cards = (
                 db.query(CardMasterData)
-                .join(CreditCard, CardMasterData.id == CreditCard.card_master_data_id)
-                .filter(
-                    CardMasterData.is_active.is_(True),
-                    CreditCard.is_active == True
-                )
-                .group_by(CardMasterData.id)
+                .filter(CardMasterData.is_active.is_(True))
                 .order_by(
-                    func.count(CreditCard.id).desc(),  # Sort by holder count
-                    CardMasterData.updated_at.desc().nullslast(),
-                    CardMasterData.id.desc()
+                    CardMasterData.updated_at.asc().nullsfirst(),
+                    CardMasterData.id.asc(),
                 )
                 .all()
             )
             total = len(cards)
             self._reset_progress(total_cards=total)
             if total == 0:
-                logger.info("No active cards found in user portfolios to process")
+                logger.info("No active cards found to process")
 
             for index, card in enumerate(cards, start=1):
                 await self.process_card_update(card, db, position=index, total=total)
@@ -242,16 +236,15 @@ class CardUpdateScheduler:
                 )
                 .group_by(CardMasterData.id)
                 .order_by(
-                    func.count(CreditCard.id).desc(),  # Sort by holder count
-                    CardMasterData.updated_at.desc().nullslast(),
-                    CardMasterData.id.desc()
+                    CardMasterData.updated_at.asc().nullsfirst(),  # Least recently updated first
+                    CardMasterData.id.asc(),
                 )
                 .all()
             )
-            
+
             total = len(cards)
             self._reset_progress(total_cards=total)
-            
+
             if total == 0:
                 logger.info("No cards found in user portfolios to process")
             else:

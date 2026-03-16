@@ -22,8 +22,39 @@ class CardUpdateState(TypedDict):
     scraped_content: Optional[str]
     research_summary: Optional[str]
     extracted_data: Optional[Dict]
+    verification_flags: Optional[Dict]
     errors: List[str]
     messages: Annotated[List[BaseMessage], add_messages]
+
+
+def _apply_points_conversion(extracted_data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Layer 2: Deterministic override of reward_rate for points-based cards.
+    If points_per_100 and rupee_value_per_point are both present and non-zero,
+    calculate effective_cashback = points_per_100 * rupee_value_per_point
+    and override the LLM's reward_rate with this value.
+    """
+    for entry in extracted_data.get("spending_categories", []):
+        p = entry.get("points_per_100")
+        v = entry.get("rupee_value_per_point")
+        if p is not None and v is not None and float(p) > 0 and float(v) > 0:
+            calculated = round(float(p) * float(v), 2)
+            logger.info(
+                f"Points conversion: {entry.get('category_name')} "
+                f"{p} pts × ₹{v}/pt = {calculated}% (was {entry.get('reward_rate')}%)"
+            )
+            entry["reward_rate"] = calculated
+    for entry in extracted_data.get("merchant_rewards", []):
+        p = entry.get("points_per_100")
+        v = entry.get("rupee_value_per_point")
+        if p is not None and v is not None and float(p) > 0 and float(v) > 0:
+            calculated = round(float(p) * float(v), 2)
+            logger.info(
+                f"Points conversion: {entry.get('merchant_name')} "
+                f"{p} pts × ₹{v}/pt = {calculated}% (was {entry.get('reward_rate')}%)"
+            )
+            entry["reward_rate"] = calculated
+    return extracted_data
 
 # --- Node 1 (New): Deep Research ---
 async def deep_research_node(state: CardUpdateState):
@@ -112,7 +143,12 @@ async def extract_structured_data(state: CardUpdateState):
                 online shopping, offline spends, fuel, dining, food delivery, grocery,
                 travel, utilities, rent, insurance, education, government payments,
                 international, entertainment, wallets. Never invent new names. If no match, omit.
-              "reward_rate": number,
+              "reward_rate": number — effective cashback %. For points cards: your best estimate.
+                The system will recalculate and override this using points_per_100 × rupee_value_per_point when available.
+              "points_per_100": number or null — REQUIRED for points-based cards: raw points earned per ₹100 spend.
+                Set null for direct cashback cards.
+              "rupee_value_per_point": number or null — REQUIRED for points-based cards: rupee value of 1 point.
+                Find this on the bank's reward redemption/catalogue page. Set null if not found.
               "reward_cap": number or null,
               "reward_cap_period": string or null
             }
@@ -123,7 +159,9 @@ async def extract_structured_data(state: CardUpdateState):
                 amazon, flipkart, swiggy, zomato, bigbasket, blinkit, myntra,
                 uber, ola, bookmyshow, phonepe, airtel, netflix, nykaa, ajio.
                 Only include if the card explicitly rewards this merchant. Never invent.
-              "reward_rate": number,
+              "reward_rate": number — effective cashback %. For points cards: your best estimate.
+              "points_per_100": number or null — same rule as spending_categories above.
+              "rupee_value_per_point": number or null — same rule as spending_categories above.
               "reward_cap": number or null,
               "reward_cap_period": string or null
             }
@@ -143,7 +181,10 @@ async def extract_structured_data(state: CardUpdateState):
         # Inject the official URL into source_urls if the model returned none
         if not json_data.get("source_urls") and state.get("official_url"):
             json_data["source_urls"] = [state["official_url"]]
-            
+
+        # Layer 2: deterministic points → cashback conversion
+        json_data = _apply_points_conversion(json_data)
+
         return {
             "extracted_data": json_data,
             "messages": [SystemMessage(content="Extraction successful")]
@@ -153,20 +194,47 @@ async def extract_structured_data(state: CardUpdateState):
         return {"errors": [f"Extraction failed: {str(e)}"]}
 
 
+# --- Node 3: Verify Extracted Data ---
+async def verify_extracted_data(state: CardUpdateState):
+    """
+    Layer 3: Independent verification of extracted data using gpt-4.1-mini with web search.
+    Flags fields where verifier disagrees with extractor → status becomes 'needs_review'.
+    Fails open: if verification errors, pipeline continues with flags = {}.
+    """
+    extracted_data = state.get("extracted_data")
+    if not extracted_data:
+        return {"verification_flags": {}}
+
+    logger.info(f"Node: Verifying data for {state['bank_name']} {state['card_name']}")
+
+    discovery_service = CardWebDiscoveryService()
+    flags = await discovery_service.verify_card_data(
+        bank_name=state["bank_name"],
+        card_name=state["card_name"],
+        extracted_data=extracted_data,
+    )
+
+    flagged_count = sum(1 for v in flags.values() if v.get("flagged"))
+    return {
+        "verification_flags": flags,
+        "messages": [SystemMessage(content=f"Verification complete. {flagged_count} field(s) flagged.")],
+    }
+
+
 # --- Graph Construction ---
 def build_card_update_graph():
     workflow = StateGraph(CardUpdateState)
-    
-    # Add Nodes
+
     workflow.add_node("deep_research", deep_research_node)
     workflow.add_node("extract_data", extract_structured_data)
-    
-    # Add Edges
+    workflow.add_node("verify_data", verify_extracted_data)
+
     workflow.set_entry_point("deep_research")
-    
+
     workflow.add_edge("deep_research", "extract_data")
-    workflow.add_edge("extract_data", END)
-    
+    workflow.add_edge("extract_data", "verify_data")
+    workflow.add_edge("verify_data", END)
+
     return workflow.compile()
 
 # Singleton accessor
